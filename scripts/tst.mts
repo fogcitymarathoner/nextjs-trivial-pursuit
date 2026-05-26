@@ -1,13 +1,16 @@
 import './env'
-import {warmupChatCompletion, getOpenAIEmbedding, queryPinecone} from "@/lib/openai_answer_helpers";
-import OpenAI from 'openai'
+import {queryPinecone} from "@/lib/openai_answer_helpers";
+
 import { Pinecone } from "@pinecone-database/pinecone";
+import {warmupChatCompletion} from "@/lib/openai";
+
+const DEBUG = process.env.DEBUG;
+if (!DEBUG) throw new Error("DEBUG is not set");
 
 const pc = new Pinecone({ apiKey: process.env.PINECONE_API_TOKEN! });
 const index = pc.index(process.env.PINECONE_INDEX_DEV!);
 
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   // To run - npx tsx scripts/tst.mts
 //console.log(client)
 // above replaces dotenv -e .env.local -- tsx -r tsconfig-paths/register scripts/tst.ts
@@ -17,24 +20,21 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   // ; is necessary
 ;(async () => {
   if (process.env.DEBUG === 'true') {
-    const result = await warmupChatCompletion(client)
+    const result = await warmupChatCompletion()
     console.log(result)
   }
   else {
-    await warmupChatCompletion(client)
+    await warmupChatCompletion()
   }
 
 })()
 
-
+const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL;
+if (!EMBEDDING_MODEL) throw new Error("EMBEDDING_MODEL is not set");
 ;(async () => {
-  const question_embedding = await getOpenAIEmbedding(client, "hi", process.env.EMBEDDING_MODEL);
-  console.log(question_embedding)
-})();
-
-;(async () => {
-  const result = await queryPinecone("Hi", process.env.EMBEDDING_MODEL,
-    index, new OpenAI(process.env.OPENAI_API_KEY), false);
-  console.log(result)
+  const result = await queryPinecone(
+    "Hi");
+  if (DEBUG)
+    console.log(result)
 })();
 //console.log(getAnswer(client, "HI", 0.0))

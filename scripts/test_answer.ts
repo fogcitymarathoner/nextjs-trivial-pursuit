@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
-
+// To run - npx tsx scripts/test_answer.ts
 async function testGetAnswer() {
   try {
     // Initialize Pinecone
@@ -40,12 +40,7 @@ async function testGetAnswer() {
       console.log("⏳ Generating answer...");
       
       const answer = await getAnswer(
-        question,
-        index,
-        openaiClient,
-        embeddingModel,
-        chatModel,
-        true // Enable debug mode
+        question
       );
 
       console.log(`\n✅ Answer: ${answer}\n`);

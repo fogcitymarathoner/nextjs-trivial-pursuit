@@ -1,7 +1,7 @@
 import './env'
-import {warmupChatCompletion, getOpenAIEmbedding} from "@/lib/openai_answer_helpers";
 import OpenAI from 'openai'
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+import {warmupChatCompletion} from "@/lib/openai";
+
   // To run - npx tsx scripts/tst.ts
 //console.log(client)
 // above replaces dotenv -e .env.local -- tsx -r tsconfig-paths/register scripts/tst.ts
@@ -11,17 +11,12 @@ const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   // ; is necessary
 ;(async () => {
   if (process.env.DEBUG === 'true') {
-    const result = await warmupChatCompletion(client)
+    const result = await warmupChatCompletion()
     console.log(result)
   }
   else {
-    await warmupChatCompletion(client)
+    await warmupChatCompletion()
   }
 
 })()
 
-;(async () => {
-  const result = await getOpenAIEmbedding(client, "hi", process.env.EMBEDDING_MODEL);
-  console.log(result)
-})();
-//console.log(getAnswer(client, "HI", 0.0))

@@ -1,26 +1,25 @@
-import type { Index } from "@pinecone-database/pinecone";
-
 /**
  * Queries Pinecone index with an embedding from OpenAI for the given question.
  * @param question The question to embed and search for
  * @param model The OpenAI embedding model
  * @param index Pinecone Index instance
- * @param client OpenAI client instance
- * @param debug Optional debug flag for logging
  * @returns Query result or null if no matches
  */
-
-import type { QueryResponse, RecordMetadata } from "@pinecone-database/pinecone";
+import type {Index, QueryResponse, RecordMetadata} from "@pinecone-database/pinecone";
+import {getOpenAIEmbedding, getOpenAIClient} from "@/lib/openai";
+import dotenv from 'dotenv'
+import {getPineconeIndex} from "@/lib/pinecone";
+dotenv.config({ path: '.env.local' })
+const DEBUG = process.env.DEBUG;
+if (!DEBUG) throw new Error("DEBUG is not set");
+const CHAT_MODEL = process.env.CHAT_MODEL;
+if (!CHAT_MODEL) throw new Error("CHAT_MODEL is not set");
 
 export async function queryPinecone(
-  question: string,
-  model: string,
-  index: Index,
-  client: OpenAI,
-  debug = false
+  question: string
 ): Promise<QueryResponse<RecordMetadata> | null> {
-  const query_embedding = await getOpenAIEmbedding(client, question, model);
-  const result = await index.query({
+  const query_embedding = await getOpenAIEmbedding(question);
+  const result = await getPineconeIndex().query({
     vector: query_embedding,
     topK: 3,
     includeValues: false,
@@ -28,20 +27,21 @@ export async function queryPinecone(
   });
 
   if (result.matches && result.matches.length > 0) {
-    if (debug) {
+    if (DEBUG) {
       console.log(`Top matches for '${question}':`);
       for (const match of result.matches) {
         console.log(match);
         // Ensure text is a string before slicing
         let text = match.metadata?.text;
         if (typeof text !== "string") text = String(text ?? "");
-        console.log(
-          `ID: ${match.id}\n` +
-          `Score: ${match.score}\n` +
-          `Page: ${match.metadata?.page}\n` +
-          `Source: ${match.metadata?.source}\n` +
-          `Text (truncated): ${text.slice(0, 200)}...`
-        );
+        if (DEBUG)
+          console.log(
+            `ID: ${match.id}\n` +
+            `Score: ${match.score}\n` +
+            `Page: ${match.metadata?.page}\n` +
+            `Source: ${match.metadata?.source}\n` +
+            `Text (truncated): ${text.slice(0, 200)}...`
+          );
       }
     }
     return result;
@@ -50,59 +50,23 @@ export async function queryPinecone(
     return null;
   }
 }
-import OpenAI from "openai";
-import dotenv from "dotenv";
-dotenv.config({ path: '.env.local' })
 
-/**
- * Returns the embedding vector for a question using OpenAI's embeddings API.
- * @param client OpenAI client instance
- * @param question The input string to embed
- * @param model The embedding model to use
- * @returns Promise<number[]> The embedding vector
- */
-export async function getOpenAIEmbedding(client: OpenAI, question: string, model: string): Promise<number[]> {
-  const response = await client.embeddings.create({
-    model,
-    input: question,
-  });
-  // OpenAI returns { data: [{ embedding: number[] }] }
-  return response.data[0].embedding;
-}
 
-export async function warmupChatCompletion(client: OpenAI) {
-
-  return client.chat.completions.create({
-    model: process.env.CHAT_MODEL!, // ensure it's set
-    messages: [{ role: "user", content: "warmup" }],
-  });
-}
 
 /**
  * Generates an answer to a question using context from Pinecone and OpenAI chat completion.
  * @param question The question to answer
  * @param index Pinecone Index instance
- * @param openaiClient OpenAI client instance
  * @param embeddingModel The OpenAI embedding model to use for query
  * @param chatModel The OpenAI chat model to use for answer generation
- * @param debug Optional debug flag for logging
  * @returns Promise<string> The generated answer
  */
 export async function getAnswer(
-  question: string,
-  index: Index,
-  openaiClient: OpenAI,
-  embeddingModel: string,
-  chatModel: string,
-  debug = false
+  question: string
 ): Promise<string> {
   // Query Pinecone for relevant context
   const queryResult = await queryPinecone(
-    question,
-    embeddingModel,
-    index,
-    openaiClient,
-    debug
+    question
   );
 
   // Build context from query results
@@ -139,7 +103,7 @@ export async function getAnswer(
     userPrompt = `Question: ${question}\n\nI couldn't find any relevant context to answer this question. Please provide a general response.`;
   }
 
-  if (debug) {
+  if (DEBUG) {
     console.log("=== Debug Info ===");
     console.log("Question:", question);
     console.log("Context found:", !!context);
@@ -150,8 +114,8 @@ export async function getAnswer(
   }
 
   // Get answer from OpenAI
-  const completion = await openaiClient.chat.completions.create({
-    model: chatModel,
+  const completion = await getOpenAIClient().chat.completions.create({
+    model: CHAT_MODEL! ,
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt }
@@ -162,7 +126,7 @@ export async function getAnswer(
 
   const answer = completion.choices[0]?.message?.content || "I couldn't generate an answer.";
   
-  if (debug) {
+  if (DEBUG) {
     console.log("Generated answer:", answer);
   }
 
