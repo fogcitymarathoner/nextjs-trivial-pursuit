@@ -5,15 +5,14 @@
  * @param index Pinecone Index instance
  * @returns Query result or null if no matches
  */
-import type {Index, QueryResponse, RecordMetadata} from "@pinecone-database/pinecone";
+import type {QueryResponse, RecordMetadata} from "@pinecone-database/pinecone";
 import {getOpenAIEmbedding, getOpenAIClient} from "@/lib/openai";
-import dotenv from 'dotenv'
+
 import {getPineconeIndex} from "@/lib/pinecone";
-dotenv.config({ path: '.env.local' })
-const DEBUG = process.env.DEBUG;
-if (!DEBUG) throw new Error("DEBUG is not set");
-const CHAT_MODEL = process.env.CHAT_MODEL;
-if (!CHAT_MODEL) throw new Error("CHAT_MODEL is not set");
+import {
+  DEBUG,
+  CHAT_MODEL} from "@/lib/env";
+
 
 export async function queryPinecone(
   question: string

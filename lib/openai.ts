@@ -1,14 +1,8 @@
 import OpenAI from "openai";
-import dotenv from "dotenv";
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
+import {
+  EMBEDDING_MODEL} from "@/lib/env";
 
-
-const DEBUG = process.env.DEBUG;
-if (!DEBUG) throw new Error("DEBUG is not set");
-const EMBEDDING_MODEL = process.env.EMBEDDING_MODEL;
-if (!EMBEDDING_MODEL) throw new Error("EMBEDDING_MODEL is not set");
 
 let client: OpenAI | null = null;
 
