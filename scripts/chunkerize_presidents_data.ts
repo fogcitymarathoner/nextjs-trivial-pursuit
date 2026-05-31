@@ -1,7 +1,7 @@
 // assumes data/presidents_clean_urls.json exists
 // created by access_gdrive_by_service_account.ts
 
-import {DEBUG, PINECONE_API_KEY} from "@/src/config/env";
+import {DEBUG, PINECONE_API_KEY} from "@/config/env";
 import {RecursiveCharacterTextSplitter} from '@langchain/textsplitters';
 import OpenAI from 'openai';
 import {Pinecone} from '@pinecone-database/pinecone';

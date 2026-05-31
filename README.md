@@ -8,7 +8,7 @@ Current a Q and A interview. Ask questions an get answers.
 # Environment Variables
 * .env - production
 * .env.local - development
-User **src/config/env.ts** to import and check existence of necessary variables
+User **config/env.ts** to import and check existence of necessary variables
 ```
 import {DEBUG, PINECONE_API_KEY} from "@/src/config/env";
 ```

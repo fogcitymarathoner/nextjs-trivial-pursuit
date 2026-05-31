@@ -1,4 +1,4 @@
-import {DEBUG} from "@/src/config/env";
+import {DEBUG} from "@/config/env";
 import {queryPinecone} from "@/lib/openai_answer_helpers";
 
 import { Pinecone } from "@pinecone-database/pinecone";

@@ -11,7 +11,7 @@ import {getOpenAIEmbedding, getOpenAIClient} from "@/lib/openai";
 import {getPineconeIndex} from "@/lib/pinecone";
 import {
   DEBUG,
-  CHAT_MODEL} from "@/src/config/env";
+  CHAT_MODEL} from "@/config/env";
 
 
 export async function queryPinecone(
