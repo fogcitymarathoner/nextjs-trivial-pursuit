@@ -1,36 +1,14 @@
-import { Pinecone } from "@pinecone-database/pinecone";
-import OpenAI from "openai";
-import { getAnswer } from "../lib/openai_answer_helpers";
-import dotenv from "dotenv";
+import { getAnswer } from "@/lib/openai_answer_helpers";
 
-// Load environment variables
-dotenv.config({ path: '.env.local' });
 // To run - npx tsx scripts/test_answer.ts
 async function testGetAnswer() {
   try {
-    // Initialize Pinecone
-    const pinecone = new Pinecone({
-      apiKey: process.env.PINECONE_API_TOKEN!,
-    });
-
-    // Get the index
-    const indexName = process.env.PINECONE_INDEX_DEV || "presidents-dev";
-    const index = pinecone.index(indexName);
-
-    // Initialize OpenAI
-    const openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY!,
-    });
-
-    // Test parameters
-    const embeddingModel = process.env.EMBEDDING_MODEL || "text-embedding-3-small";
-    const chatModel = process.env.CHAT_MODEL || "gpt-4o-mini";
-    
     // Test questions
     const testQuestions = [
       "What is the capital of France?",
       "Who wrote Romeo and Juliet?",
       "What year did World War II end?",
+      "When was VE day?",
     ];
 
     console.log("Testing getAnswer function...\n");
