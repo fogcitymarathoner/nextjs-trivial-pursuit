@@ -61,12 +61,21 @@ async function fetchWithRetry(url: string, headers: any, maxRetries: number = 3)
       return await response.json();
 
     } catch (error) {
-      if (attempt === maxRetries) throw error;
-      console.log(`Request failed: ${error.message}. Retrying in ${delay/1000}s...`);
+      if (attempt === maxRetries) {
+        // Re-throw with better error message
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        throw new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`);
+      }
+
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`Request failed: ${errorMessage}. Retrying in ${delay/1000}s...`);
       await sleep(delay);
       delay *= 2;
     }
   }
+
+  // TypeScript requires this even though the loop always returns or throws
+  throw new Error('Unexpected: Max retries exceeded');
 }
 
 function sleep(ms: number): Promise<void> {

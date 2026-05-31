@@ -1,5 +1,5 @@
 import { getOpenAIClient } from "./openai";
-import { EMBEDDING_MODEL } from "@src/config/env"
+import { EMBEDDING_MODEL } from "@/config/env"
 
 interface ChunkMetadata {
   text: string;

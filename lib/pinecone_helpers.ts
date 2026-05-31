@@ -1,6 +1,6 @@
 // lib/pinecone_helpers.ts
 import { Pinecone } from "@pinecone-database/pinecone";
-import { VECTOR_SIZE } from "@src/config/env"
+import { VECTOR_SIZE } from "@/config/env"
 
 export async function recreateIndex(pc: Pinecone, indexName: string) {
   try {

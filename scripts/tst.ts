@@ -1,5 +1,5 @@
-import '../src/config/env'
-import {DEBUG} from "@/src/config/env";
+import '../config/env'
+import {DEBUG} from "@/config/env";
 import {warmupChatCompletion} from "@/lib/openai";
 
   // To run - npx tsx scripts/tst.ts
