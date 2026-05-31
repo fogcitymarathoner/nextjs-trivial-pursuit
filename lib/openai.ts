@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 import {
-  EMBEDDING_MODEL} from "@/lib/env";
+  EMBEDDING_MODEL} from "@/src/config/env";
 
 
 let client: OpenAI | null = null;

@@ -1,5 +1,5 @@
-import './env'
-import OpenAI from 'openai'
+import '../src/config/env'
+import {DEBUG} from "@/src/config/env";
 import {warmupChatCompletion} from "@/lib/openai";
 
   // To run - npx tsx scripts/tst.ts
@@ -10,7 +10,7 @@ import {warmupChatCompletion} from "@/lib/openai";
 // npx tsx -r tsconfig-paths/register scripts/tst.ts
   // ; is necessary
 ;(async () => {
-  if (process.env.DEBUG === 'true') {
+  if (DEBUG === 'true') {
     const result = await warmupChatCompletion()
     console.log(result)
   }

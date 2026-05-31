@@ -11,7 +11,7 @@ import {getOpenAIEmbedding, getOpenAIClient} from "@/lib/openai";
 import {getPineconeIndex} from "@/lib/pinecone";
 import {
   DEBUG,
-  CHAT_MODEL} from "@/lib/env";
+  CHAT_MODEL} from "@/src/config/env";
 
 
 export async function queryPinecone(
@@ -26,14 +26,14 @@ export async function queryPinecone(
   });
 
   if (result.matches && result.matches.length > 0) {
-    if (DEBUG) {
+    if (DEBUG === 'true') {
       console.log(`Top matches for '${question}':`);
       for (const match of result.matches) {
         console.log(match);
         // Ensure text is a string before slicing
         let text = match.metadata?.text;
         if (typeof text !== "string") text = String(text ?? "");
-        if (DEBUG)
+        if (DEBUG === 'true')
           console.log(
             `ID: ${match.id}\n` +
             `Score: ${match.score}\n` +
@@ -102,7 +102,7 @@ export async function getAnswer(
     userPrompt = `Question: ${question}\n\nI couldn't find any relevant context to answer this question. Please provide a general response.`;
   }
 
-  if (DEBUG) {
+  if (DEBUG === 'true') {
     console.log("=== Debug Info ===");
     console.log("Question:", question);
     console.log("Context found:", !!context);
@@ -125,7 +125,7 @@ export async function getAnswer(
 
   const answer = completion.choices[0]?.message?.content || "I couldn't generate an answer.";
   
-  if (DEBUG) {
+  if (DEBUG === 'true') {
     console.log("Generated answer:", answer);
   }
 

@@ -1,14 +1,13 @@
-import './env'
+import {DEBUG} from "@/src/config/env";
 import {queryPinecone} from "@/lib/openai_answer_helpers";
 
 import { Pinecone } from "@pinecone-database/pinecone";
 import {warmupChatCompletion} from "@/lib/openai";
 
-const DEBUG = process.env.DEBUG;
 if (!DEBUG) throw new Error("DEBUG is not set");
 
-const pc = new Pinecone({ apiKey: process.env.PINECONE_API_TOKEN! });
-const index = pc.index(process.env.PINECONE_INDEX_DEV!);
+const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY! });
+const index = pc.index(process.env.PINECONE_API_KEY!);
 
 
   // To run - npx tsx scripts/tst.mts
@@ -34,7 +33,7 @@ if (!EMBEDDING_MODEL) throw new Error("EMBEDDING_MODEL is not set");
 ;(async () => {
   const result = await queryPinecone(
     "Hi");
-  if (DEBUG)
+  if (DEBUG === 'true')
     console.log(result)
 })();
 //console.log(getAnswer(client, "HI", 0.0))

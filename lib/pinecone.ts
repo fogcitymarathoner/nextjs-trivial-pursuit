@@ -1,10 +1,10 @@
 import { Pinecone, Index } from "@pinecone-database/pinecone";
 
 import {
-  PINECONE_API_TOKEN,
-  PINECONE_INDEX_DEV} from "@/lib/env";
+  PINECONE_API_KEY,
+  PINECONE_INDEX_DEV} from "@/src/config/env";
 
-const pc = new Pinecone({ apiKey: PINECONE_API_TOKEN! });
+const pc = new Pinecone({ apiKey: PINECONE_API_KEY! });
 
 
 let index:  Index | null = null;

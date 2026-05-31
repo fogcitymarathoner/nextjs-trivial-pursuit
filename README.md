@@ -1,6 +1,17 @@
 # Trivial Pursuit
 Current a Q and A interview. Ask questions an get answers.
 
+# App Router
+## Stack
+* "next": "16.2.6"
+* Tailwind
+# Environment Variables
+* .env - production
+* .env.local - development
+User **src/config/env.ts** to import and check existence of necessary variables
+```
+import {DEBUG, PINECONE_API_KEY} from "@/src/config/env";
+```
 # Using NVM with native node intact
 Prepend **C:\Users\marc\AppData\Roaming\nvm\v20.19.0** to system path.
 ```
@@ -12,3 +23,11 @@ npx tsx scripts/my-script.ts
 # or with .env files
 npx dotenv -e .env.local -- tsx scripts/my-script.ts
 ```
+# Local Production Testing
+## Test the Docker build locally
+npm run build
+node .next/standalone/server.js
+
+## Or test with Docker
+docker build -t my-app .
+docker run -p 3000:3000 my-app

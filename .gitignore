@@ -16,3 +16,4 @@ yarn-error.log*
 .next/*
 credentials/
 data/
+garb.ps1
