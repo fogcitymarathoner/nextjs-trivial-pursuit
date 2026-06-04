@@ -16,7 +16,7 @@ if (!EMBEDDING_MODEL) throw new Error("EMBEDDING_MODEL is not set");
 export const PINECONE_API_KEY = process.env.PINECONE_API_KEY;
 if (!PINECONE_API_KEY) throw new Error("PINECONE_API_KEY is not set");
 
-export const PINECONE_INDEX_DEV = process.env.PINECONE_INDEX_DEV;
+export const PINECONE_INDEX_DEV: string | undefined = process.env.PINECONE_INDEX_DEV;
 if (!PINECONE_INDEX_DEV) throw new Error("PINECONE_INDEX_DEV is not set");
 
 export const CLIENT_SECRET_FILE = process.env.CLIENT_SECRET_FILE_FOGCITYMARATHONER_LIST_FILES_2;
