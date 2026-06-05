@@ -1,8 +1,9 @@
 // lib/pinecone_helpers.ts
 import { Pinecone } from "@pinecone-database/pinecone";
-import { VECTOR_SIZE } from "@/config/env"
+import {PINECONE_INDEX_DEV} from "@/config/env";
+import { VECTOR_SIZE } from "@/config/env";
 
-export async function recreateIndex(pc: Pinecone, indexName: string) {
+export const recreateIndex = async (pc: Pinecone, indexName: string | undefined) => {
   try {
     // Check if index exists
     const indexes = await pc.listIndexes();
@@ -10,7 +11,7 @@ export async function recreateIndex(pc: Pinecone, indexName: string) {
 
     if (indexExists) {
       console.log(`Deleting index: ${indexName}`);
-      await pc.deleteIndex(indexName);
+      await pc.deleteIndex(PINECONE_INDEX_DEV);
 
       // CRITICAL: Wait for deletion to complete
       console.log("Waiting for index deletion to propagate...");
@@ -33,7 +34,7 @@ export async function recreateIndex(pc: Pinecone, indexName: string) {
     // Create new index
     console.log(`Creating index: ${indexName}`);
     await pc.createIndex({
-      name: indexName,
+      name: PINECONE_INDEX_DEV,
       dimension: Number(VECTOR_SIZE),
       metric: "cosine",
       spec: {
@@ -54,9 +55,9 @@ export async function recreateIndex(pc: Pinecone, indexName: string) {
     console.error("Failed to recreate index:", error);
     throw error;
   }
-}
+};
 
-export async function createIndexIfNotExists(pc: Pinecone, indexName: string) {
+export const createIndexIfNotExists = async (pc: Pinecone, indexName: string) => {
   try {
     const indexes = await pc.listIndexes();
     const indexExists = indexes.indexes?.some(idx => idx.name === indexName);
@@ -85,4 +86,4 @@ export async function createIndexIfNotExists(pc: Pinecone, indexName: string) {
     console.error("Error with index:", error);
     throw error;
   }
-}
+};
