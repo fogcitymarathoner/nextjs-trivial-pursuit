@@ -9,6 +9,8 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": ".",     // File resolution
+    "ignoreDeprecations": "6.0",  // Silences TypeScript 6.0 deprecation errors
+                                  // It allows you to build your project immediately after upgrading to TS6
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
@@ -44,5 +46,5 @@
   ],
   "exclude": [
     "node_modules"
-  ]
+  ],
 }

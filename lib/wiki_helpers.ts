@@ -5,20 +5,31 @@ interface WikiPage {
   fullContent?: string;
 }
 
-export async function getWikiPage(title: string, getFullContent: boolean = false): Promise<WikiPage> {
+// Define the response type from Wikipedia API
+interface WikipediaSummaryResponse {
+  title: string;
+  extract: string;
+  pageid?: number;
+  thumbnail?: {
+    source: string;
+    width: number;
+    height: number;
+  };
+}
+
+export const getWikiPage = async (title: string, getFullContent: boolean = false): Promise<WikiPage> => {
   const headers = {
     'User-Agent': 'TriviaApp/1.0 (marc@example.com) - Learning project',
     'Accept': 'application/json',
     'Api-User-Agent': 'TriviaApp/1.0'
   };
 
-  // First get summary (faster, rate-limit friendly)
   const summaryUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`;
-  const summaryData = await fetchWithRetry(summaryUrl, headers);
+  // Specify the type here!
+  const summaryData = await fetchWithRetry<WikipediaSummaryResponse>(summaryUrl, headers);
 
   let fullContent = undefined;
 
-  // Optionally get full content
   if (getFullContent) {
     const contentUrl = `https://en.wikipedia.org/api/rest_v1/page/html/${encodeURIComponent(title)}`;
     try {
@@ -35,9 +46,9 @@ export async function getWikiPage(title: string, getFullContent: boolean = false
     text: summaryData.extract,
     fullContent
   };
-}
+};
 
-async function fetchWithRetry(url: string, headers: any, maxRetries: number = 3): Promise<any> {
+const fetchWithRetry = async <T>(url: string, headers: HeadersInit, maxRetries: number = 3): Promise<T> => {
   let delay = 1000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -62,7 +73,6 @@ async function fetchWithRetry(url: string, headers: any, maxRetries: number = 3)
 
     } catch (error) {
       if (attempt === maxRetries) {
-        // Re-throw with better error message
         const errorMessage = error instanceof Error ? error.message : String(error);
         throw new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`);
       }
@@ -74,10 +84,7 @@ async function fetchWithRetry(url: string, headers: any, maxRetries: number = 3)
     }
   }
 
-  // TypeScript requires this even though the loop always returns or throws
   throw new Error('Unexpected: Max retries exceeded');
-}
+};
 
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));

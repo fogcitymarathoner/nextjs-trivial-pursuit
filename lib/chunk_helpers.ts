@@ -1,7 +1,7 @@
 import { getOpenAIClient } from "./openai";
-import { EMBEDDING_MODEL } from "@/config/env"
+import { EMBEDDING_MODEL } from "@/config/env";
 
-interface ChunkMetadata {
+export interface ChunkMetadata {
   text: string;
   title: string;
   pageUrl: string;
@@ -13,22 +13,19 @@ interface ChunkMetadata {
   pageNumbers: number[] | null;
 }
 
-export function generateChunkId(chunkText: string): string {
-  // Implement your chunk ID generation logic
-  return Buffer.from(chunkText.substring(0, 100)).toString('base64');
-}
+export const generateChunkId = (chunkText: string): string =>
+  Buffer.from(chunkText.substring(0, 100)).toString("base64");
 
-export async function embed(text: string): Promise<number[]> {
-  // Implement OpenAI embedding logic
+export const embed = async (text: string): Promise<number[]> => {
   const openai = getOpenAIClient();
   const response = await openai.embeddings.create({
-    model: EMBEDDING_MODEL!, // non-null assertion, ensure it's defined
-    input: text
+    model: EMBEDDING_MODEL!,
+    input: text,
   });
   return response.data[0].embedding;
-}
+};
 
-export function processChunkMetadata(
+export const processChunkMetadata = (
   chunkText: string,
   title: string,
   pageUrl: string,
@@ -38,16 +35,14 @@ export function processChunkMetadata(
   chunkIndex: number,
   links: string[],
   pageNumbers: number[] | null
-): ChunkMetadata {
-  return {
-    text: chunkText,
-    title,
-    pageUrl,
-    namespace,
-    customerUid,
-    scrapeVersion,
-    chunkIndex,
-    links,
-    pageNumbers
-  };
-}
+): ChunkMetadata => ({
+  text: chunkText,
+  title,
+  pageUrl,
+  namespace,
+  customerUid,
+  scrapeVersion,
+  chunkIndex,
+  links,
+  pageNumbers,
+});
