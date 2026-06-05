@@ -1,11 +1,9 @@
-import { getAnswer } from "@/lib/openai_answer_helpers";
 import dotenv from "dotenv";
 
 // Load environment variables
 dotenv.config({ path: '.env.local' });
 
-
-export default function Home() {
+const Home = () => {
   return (
     <>
       <h1 className="text-5xl font-bold text-blue-600">
@@ -13,4 +11,6 @@ export default function Home() {
       </h1>
     </>
   );
-}
+};
+
+export default Home;

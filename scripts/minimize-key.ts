@@ -109,7 +109,7 @@ class GCPKeyMinimizer {
 }
 
 // CLI Interface
-async function main() {
+const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
 
   // Parse command line arguments
@@ -207,7 +207,7 @@ Examples:
     console.error('❌ Error:', error instanceof Error ? error.message : error);
     process.exit(1);
   }
-}
+};
 
 // Run if called directly
 if (require.main === module) {
