@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import Home from "@/app/page";
 
 export const metadata: Metadata = {
   title: 'About',
   description: 'Learn more about this trivia app',
 };
 
-export default function AboutPage() {
+const AboutPage = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">About This Project</h1>
@@ -24,3 +25,5 @@ export default function AboutPage() {
     </div>
   );
 }
+
+export default AboutPage;

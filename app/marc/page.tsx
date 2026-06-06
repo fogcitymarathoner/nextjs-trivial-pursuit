@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
+import AboutPage from "@/app/about/page";
 
 export const metadata: Metadata = {
   title: 'Marc',
   description: 'Learn about Marc',
 };
 
-export default function MarcPage() {
+const MarcPage = () => {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold">About Marc</h1>
@@ -15,3 +16,5 @@ export default function MarcPage() {
     </div>
   );
 }
+
+export default MarcPage;
