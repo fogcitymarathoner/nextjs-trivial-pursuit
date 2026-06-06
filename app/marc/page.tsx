@@ -1,0 +1,17 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Marc',
+  description: 'Learn about Marc',
+};
+
+export default function MarcPage() {
+  return (
+    <div className="space-y-6">
+      <h1 className="text-3xl font-bold">About Marc</h1>
+      <p className="text-gray-600">
+        This page is dedicated to Marc.
+      </p>
+    </div>
+  );
+}
