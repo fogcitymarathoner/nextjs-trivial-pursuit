@@ -38,6 +38,7 @@ jobs:
           CI: true
           DEBUG: true
           CHAT_MODEL: gpt-4o-mini
+          EMBEDDING_MODEL: text-embedding-3-large
 
       - name: Create artifact name with context
         id: artifact-name
