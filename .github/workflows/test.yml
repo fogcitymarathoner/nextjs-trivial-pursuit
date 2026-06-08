@@ -1,0 +1,67 @@
+name: Run Jest Tests
+
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+    branches:
+      - master
+  pull_request_target:
+    branches:
+      - master
+
+env:
+  NODE_ENV: test
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run wiki_helpers test with coverage
+        run: yarn test lib/__tests__/wiki_helpers.test.ts --coverage
+        env:
+          NODE_ENV: test
+          CI: true
+
+      - name: Create artifact name with context
+        id: artifact-name
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            NAME="pr-${{ github.event.pull_request.number }}-${{ github.head_ref }}"
+          else
+            NAME="${{ github.ref_name }}"
+          fi
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "Artifact name: $NAME"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-${{ steps.artifact-name.outputs.name }}-${{ github.run_id }}
+          path: coverage/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ steps.artifact-name.outputs.name }}-${{ github.run_id }}
+          path: |
+            coverage/
+            test-results.json
+          retention-days: 7

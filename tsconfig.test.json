@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Jest-specific relaxed type checking
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "strictFunctionTypes": false,
+    "strictPropertyInitialization": false,
+    "noImplicitThis": false,
+    "alwaysStrict": false,
+    "skipLibCheck": true,
+
+    // Source maps for accurate coverage reporting
+    "sourceMap": true,
+    "inlineSources": true,
+
+    // Module resolution for Jest's Node environment
+    "moduleResolution": "node",
+
+    "types": ["jest", "node"]
+  },
+  "include": ["lib/**/*.test.ts", "lib/**/*.ts", "app/**/*.test.tsx", "app/**/*.tsx"],
+  "exclude": ["node_modules", ".next", "dist", "out"]
+}

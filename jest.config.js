@@ -1,8 +1,67 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
-    testMatch: ['**/tests/**/*.test.ts'],
+    testMatch: ['**/*.test.ts', '**/*.test.tsx', '**/*.test.js'],
     transform: {
-        '^.+\\.tsx?$': 'ts-jest',
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
+            tsconfig: 'tsconfig.json',
+            jsx: 'react-jsx',
+            esModuleInterop: true,
+        }],
+        '^.+\\.(js|jsx)$': ['babel-jest', { presets: ['next/babel'] }],
     },
-}
+    moduleNameMapper: {
+        '^@/(.*)$': '<rootDir>/$1',
+    },
+    testPathIgnorePatterns: [
+        '/node_modules/',
+        '/.next/',
+        '/out/',
+        '/dist/'
+    ],
+    modulePathIgnorePatterns: [
+        '<rootDir>/.next/',
+        '<rootDir>/out/'
+    ],
+    transformIgnorePatterns: [
+        '/node_modules/',
+        '/.next/'
+    ],
+    watchPathIgnorePatterns: [
+        '<rootDir>/.next/'
+    ],
+    roots: ['<rootDir>'],
+    cacheDirectory: '<rootDir>/.jest-cache',
+    testTimeout: 10000,
+    
+    // Enable coverage collection
+    collectCoverage: true,
+    
+    // Exclude ALL test files from coverage reports
+    collectCoverageFrom: [
+        "app/**/*.{ts,tsx}",
+        "lib/**/*.{ts,tsx}",
+        "!app/**/__tests__/**",
+        "!lib/**/__tests__/**",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!**/*.test.js",
+        "!**/*.spec.ts",
+        "!**/*.spec.tsx",
+        "!**/*.d.ts",
+        "!**/node_modules/**",
+    ],
+    
+    coverageReporters: ["text", "text-summary", "lcov", "html"],
+    coverageDirectory: "<rootDir>/coverage",
+    coverageProvider: "v8",
+    
+    coverageThreshold: {
+        global: {
+            branches: 90,
+            functions: 90,
+            lines: 90,
+            statements: 90,
+        },
+    },
+};

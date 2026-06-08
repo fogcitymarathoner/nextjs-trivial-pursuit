@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Home Page Snapshot matches snapshot 1`] = `
+<div>
+  <h1
+    class="text-5xl font-bold text-blue-600"
+  >
+    If this is blue and big, Tailwind is working!
+  </h1>
+</div>
+`;

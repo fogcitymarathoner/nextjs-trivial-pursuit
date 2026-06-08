@@ -14,11 +14,128 @@ import {
   CHAT_MODEL,
   DEFAULT_THRESHOLD} from "@/config/env";
 
+// Diagnostic guards to help tests debug module load / mock ordering issues
+try {
+  // Log imported symbols' types so we can see if imports were mocked/undefined
+  // eslint-disable-next-line no-console
+  console.log('OA: init - imported types', {
+    getOpenAIEmbedding: typeof getOpenAIEmbedding,
+    getOpenAIClient: typeof getOpenAIClient,
+    getPineconeIndex: typeof getPineconeIndex,
+    DEBUG: typeof DEBUG
+  });
+} catch (err) {
+  // eslint-disable-next-line no-console
+  console.error('OA: init - import introspect failed', err);
+}
+
+// ----- Helper utilities (restored) -----
+export function parseAnswer(answer: string | null | undefined): any | null {
+  if (!answer || typeof answer !== 'string') return null;
+  try {
+    return JSON.parse(answer);
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to parse answer:', err);
+    return null;
+  }
+}
+
+export function extractTextFromAnswer(answer: any): string {
+  if (!answer) return '';
+  if (typeof answer === 'string') return answer;
+  if (typeof answer.text === 'string' && answer.text.trim() !== '') return answer.text;
+  if (answer.content && typeof answer.content.text === 'string') return answer.content.text;
+  return '';
+}
+
+export function isValidAnswer(answer: any): boolean {
+  const text = extractTextFromAnswer(answer);
+  return typeof text === 'string' && text.trim().length > 0;
+}
+
+export function formatAnswerForDisplay(answer: any, opts?: { separator?: string }): any {
+  if (!answer) return '';
+  let text = extractTextFromAnswer(answer);
+  if (!text) return '';
+  // collapse whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  // basic HTML escape
+  text = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return text;
+}
+
+export function extractMetadata(answer: any, fields?: string[]): any {
+  const out: any = {};
+  if (!answer || typeof answer !== 'object') return out;
+  const candidates = {
+    confidence: answer.confidence,
+    model: answer.model,
+    tokens: answer.tokens,
+    temperature: answer.temperature,
+    max_tokens: answer.max_tokens,
+    ...(answer.metadata || {})
+  };
+  if (Array.isArray(fields) && fields.length > 0) {
+    for (const k of fields) {
+      if (k in candidates) out[k] = candidates[k];
+    }
+    return out;
+  }
+  // default: include known keys
+  for (const k of Object.keys(candidates)) {
+    if (candidates[k] !== undefined) out[k] = candidates[k];
+  }
+  return out;
+}
+
+export function mergeAnswers(answers: any[], opts?: { separator?: string, strategy?: Function, deduplicate?: boolean }): any {
+  const validItems = answers.filter(a => isValidAnswer(a));
+  if (validItems.length === 0) return null;
+
+  // Strategy override
+  if (opts?.strategy && typeof opts.strategy === 'function' && answers.length >= 2) {
+    return opts.strategy(answers[0], answers[1]);
+  }
+
+  // If only one valid and it's an object, return it as-is
+  if (validItems.length === 1 && typeof validItems[0] === 'object') {
+    return validItems[0];
+  }
+
+  const areAllStrings = validItems.every(a => typeof a === 'string');
+  const joinSep = areAllStrings ? (opts?.separator ?? ' ') : (opts?.separator ?? '\n---\n');
+  const valid = validItems.map(a => (typeof a === 'string' ? a : extractTextFromAnswer(a)));
+  let combined = valid.join(joinSep);
+  if (opts?.deduplicate) {
+    const seen = new Set<string>();
+    const parts: string[] = [];
+    for (const p of combined.split(joinSep)) {
+      if (!seen.has(p)) { seen.add(p); parts.push(p); }
+    }
+    combined = parts.join(joinSep);
+  }
+  const metadata: any = {};
+  // compute simple average confidence if objects provided
+  const confidences = answers.map(a => (a && typeof a === 'object' && a.confidence) ? a.confidence : null).filter((c: any) => typeof c === 'number') as number[];
+  if (confidences.length) {
+    const avg = confidences.reduce((s, v) => s + v, 0) / confidences.length;
+    metadata.average_confidence = Math.round(avg * 100) / 100;
+  }
+  return { text: combined, metadata };
+}
+
+
+// Diagnostic: mark before defining exported functions
+// eslint-disable-next-line no-console
+console.log('OA: defining queryPinecone');
 
 export const queryPinecone = async (
   question: string,
   similarityThreshold: number = Number(DEFAULT_THRESHOLD)  // Add parameter with default 0.4
 ): Promise<QueryResponse<RecordMetadata> | null> => {
+  // eslint-disable-next-line no-console
+  console.log('OA: entered queryPinecone');
   const query_embedding = await getOpenAIEmbedding(question);
   const result = await getPineconeIndex().query({
     vector: query_embedding,
@@ -26,6 +143,11 @@ export const queryPinecone = async (
     includeValues: false,
     includeMetadata: true,
   });
+
+  if (!result || !result.matches || result.matches.length === 0) {
+    console.log(`No matches found for '${question}'`);
+    return null;
+  }
 
   if (result.matches && result.matches.length > 0) {
     // Filter matches by similarity threshold
@@ -72,6 +194,8 @@ export async function getAnswer(
   similarityThreshold: number = 0.5,
   fallbackToGeneralKnowledge: boolean = true
 ): Promise<string> {
+  // eslint-disable-next-line no-console
+  console.log('OA: entered getAnswer');
   // Query Pinecone for relevant context with threshold
   const queryResult = await queryPinecone(
     question,

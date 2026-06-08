@@ -17,3 +17,5 @@ yarn-error.log*
 credentials/
 data/
 garb.ps1
+.jest-cache/
+coverage/
