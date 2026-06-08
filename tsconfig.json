@@ -1,50 +1,28 @@
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "target": "ES2020", // Compile TS to JS with ECMAScript 2020 features
-    "module": "esnext", // ES module syntax (import/export) - IMPORT vs require
+    "target": "ES2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": ".",     // File resolution
-    "ignoreDeprecations": "6.0",  // Silences TypeScript 6.0 deprecation errors
-                                  // It allows you to build your project immediately after upgrading to TS6
-    "baseUrl": ".",
+    "rootDir": ".",
     "paths": {
       "@/*": ["./*"],
+      "*": ["./*"]
     },
-    "lib": [            // built-in JavaScript APIs and environment features are available in code
-      "ES2020",         // objects from ECMAScript 2020 (Promise, Map, Set, BigInt, optional chaining, nullish coalescing, etc.)
-      "DOM",            // Browser APIs (window, document, HTMLElement, Event, localStorage, fetch, etc.)
-      "DOM.Iterable"    // Iterable versions of DOM collections (NodeList, HTMLCollection, etc.) - allows for...of loops on DOM elements
-    ],
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "allowJs": true,
     "noEmit": true,
     "incremental": true,
-    "moduleResolution": "bundler",  // How to find modules
-    // TypeScript to use resolution rules that match modern bundlers like webpack,
-    // Vite, esbuild, and Turbopack
-    // Bundler rules (flexible, no extensions needed, supports path aliases)
-    // // node_modules resolution
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "moduleDetection": "force",
+    "plugins": [{ "name": "next" }]
   },
-  "include": [
-    "app",
-    "lib",
-    "scripts",
-    "config",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-  ],
-  "exclude": [
-    "node_modules"
-  ],
+  "include": ["app", "lib", "scripts", "config", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }

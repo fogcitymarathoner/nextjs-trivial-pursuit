@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Home from "@/app/page";
+import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -14,7 +14,12 @@ const AboutPage = () => {
         This trivia app helps you test your knowledge with interesting questions.
       </p>
       <div className="flex flex-col gap-y-4 md:gap-y-8">
-      <h2>Stack</h2>
+        <p className="text-gray-600"><span>Deploys to </span>
+          <Link href="/">
+            GCP
+          </Link>
+        </p>
+        <h2>Stack</h2>
         <ul>
           <li>Node.js v24.14.0</li>
           <li>Approuter</li>
