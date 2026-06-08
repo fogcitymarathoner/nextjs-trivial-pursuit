@@ -36,6 +36,7 @@ jobs:
         env:
           NODE_ENV: test
           CI: true
+          DEBUG: true
 
       - name: Create artifact name with context
         id: artifact-name
