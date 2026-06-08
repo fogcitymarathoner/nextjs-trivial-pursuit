@@ -37,6 +37,7 @@ jobs:
           NODE_ENV: test
           CI: true
           DEBUG: true
+          CHAT_MODEL: gpt-4o-mini
 
       - name: Create artifact name with context
         id: artifact-name
