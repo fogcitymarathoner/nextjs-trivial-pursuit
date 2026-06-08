@@ -45,6 +45,7 @@ jobs:
           VECTOR_SIZE: 3072
           CLIENT_SECRET_FILE: xxxxxxx
           DEFAULT_THRESHOLD: 0.4
+          CLIENT_SECRET_FILE_FOGCITYMARATHONER_LIST_FILES_2: XXXXXXX
 
       - name: Create artifact name with context
         id: artifact-name
