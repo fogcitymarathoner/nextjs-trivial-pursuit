@@ -19,3 +19,6 @@ data/
 garb.ps1
 .jest-cache/
 coverage/
+dist/
+Microsoft/
+tmp

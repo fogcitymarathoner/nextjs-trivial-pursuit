@@ -1,6 +1,6 @@
 import '../config/env'
 import {DEBUG} from "@/config/env";
-import {warmupChatCompletion} from "@/lib/openai";
+import OpenAIClientManager from '@/lib/OpenAIClientManager';
 
   // To run - npx tsx scripts/tst.ts
 //console.log(client)
@@ -11,11 +11,11 @@ import {warmupChatCompletion} from "@/lib/openai";
   // ; is necessary
 ;(async () => {
   if (DEBUG === 'true') {
-    const result = await warmupChatCompletion()
+    const result = await OpenAIClientManager.warmupChatCompletion()
     console.log(result)
   }
   else {
-    await warmupChatCompletion()
+    await OpenAIClientManager.warmupChatCompletion()
   }
 
 })()

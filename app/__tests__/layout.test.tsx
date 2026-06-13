@@ -3,6 +3,25 @@
  */
 
 import { render, screen } from '@testing-library/react';
+// Polyfill MessageChannel for react-dom/server in Jest (jsdom/node doesn't provide it)
+if (typeof (global as any).MessageChannel === 'undefined') {
+  (global as any).MessageChannel = class {
+    port1: any;
+    port2: any;
+    constructor() {
+      this.port1 = {};
+      this.port2 = {};
+    }
+  };
+}
+// Polyfill TextEncoder/TextDecoder for react-dom/server
+if (typeof (global as any).TextEncoder === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { TextEncoder, TextDecoder } = require('util');
+  (global as any).TextEncoder = TextEncoder;
+  (global as any).TextDecoder = TextDecoder;
+}
+import { renderToStaticMarkup } from 'react-dom/server';
 import RootLayout from '../layout';
 import '@testing-library/jest-dom';
 
@@ -33,7 +52,23 @@ describe('RootLayout', () => {
   };
 
   beforeEach(() => {
-    render(<RootLayout {...defaultProps} />);
+    // Render to static markup and populate document to avoid nesting <html> inside test container
+    const markup = renderToStaticMarkup(<RootLayout {...defaultProps} />);
+    const htmlMatch = markup.match(/<html([^>]*)>/);
+    if (htmlMatch) {
+      const langMatch = htmlMatch[1].match(/lang=["']([^"']+)["']/);
+      if (langMatch) document.documentElement.lang = langMatch[1];
+      const classMatch = htmlMatch[1].match(/class=["']([^"']*)["']/);
+      if (classMatch) document.documentElement.className = classMatch[1];
+    }
+    const bodyMatch = markup.match(/<body([^>]*)>([\s\S]*?)<\/body>/);
+    if (bodyMatch) {
+      const bodyClassMatch = bodyMatch[1].match(/class=["']([^"']*)["']/);
+      if (bodyClassMatch) document.body.className = bodyClassMatch[1];
+      document.body.innerHTML = bodyMatch[2];
+    } else {
+      document.body.innerHTML = '';
+    }
   });
 
   it('renders without crashing', () => {
@@ -90,12 +125,12 @@ describe('RootLayout', () => {
   });
 
   it('has correct document structure order', () => {
-    const html = document.querySelector('html');
-    const body = html?.querySelector('body');
-    const header = body?.querySelector('[data-testid="mock-header"]');
-    const main = body?.querySelector('main');
-    const child = main?.querySelector('[data-testid="test-child"]');
-    
+    const html = document.querySelector('html') as HTMLElement | null;
+    const body = html?.querySelector('body') as HTMLElement | null;
+    const header = body?.querySelector('[data-testid="mock-header"]') as HTMLElement | null;
+    const main = body?.querySelector('main') as HTMLElement | null;
+    const child = main?.querySelector('[data-testid="test-child"]') as HTMLElement | null;
+
     expect(html).toContainElement(body || null);
     expect(body).toContainElement(header || null);
     expect(body).toContainElement(main || null);

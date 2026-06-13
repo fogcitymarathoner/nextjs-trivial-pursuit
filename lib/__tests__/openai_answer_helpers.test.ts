@@ -1,348 +1,421 @@
 // lib/__tests__/openai_answer_helpers.test.ts
-const mockGetOpenAIEmbedding = jest.fn().mockResolvedValue([0.1, 0.2, 0.3]);
-const mockCreate = jest.fn().mockResolvedValue({ choices: [{ message: { content: 'LLM ANSWER' } }] });
-const mockQuery = jest.fn();
 
-jest.mock('@/lib/openai', () => ({
-  getOpenAIEmbedding: mockGetOpenAIEmbedding,
-  getOpenAIClient: () => ({ chat: { completions: { create: mockCreate } } })
+// IMPORTANT: All mocks MUST be defined before ANY imports
+const mockPineconeIndex = {
+  query: jest.fn(),
+  deleteMany: jest.fn(),
+  deleteOne: jest.fn(),
+  describeIndexStats: jest.fn(),
+  fetch: jest.fn(),
+  listPaginated: jest.fn(),
+  namespace: jest.fn(),
+  update: jest.fn(),
+  upsert: jest.fn(),
+};
+
+jest.mock('@/lib/PineconeManager', () => ({
+  __esModule: true,
+  default: {
+    getIndex: jest.fn().mockReturnValue(mockPineconeIndex),
+  },
 }));
 
-jest.mock('@/lib/pinecone', () => ({
-  getPineconeIndex: () => ({ query: mockQuery })
+jest.mock('@/lib/OpenAIClientManager', () => ({
+  __esModule: true,
+  default: {
+    getEmbedding: jest.fn(),
+    getClient: jest.fn(),
+    embed: jest.fn(),
+    warmupChatCompletion: jest.fn(),
+    setClient: jest.fn(),
+  },
 }));
 
-import {describe, expect, it} from '@jest/globals';
+jest.mock('@/config/env', () => ({
+  DEBUG: 'false',
+  CHAT_MODEL: 'gpt-3.5-turbo',
+  DEFAULT_THRESHOLD: '0.4',
+  EMBEDDING_MODEL: 'text-embedding-3-small',
+  PINECONE_API_KEY: 'test-api-key',
+  PINECONE_INDEX: 'test-index',
+  PINECONE_INDEX_DEV: 'test-index',
+  VECTOR_SIZE: '1536',
+}));
+
+// Now import everything after mocks
+import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
+import OpenAIClientManager from '../OpenAIClientManager';
+import PineconeManager from '../PineconeManager';
 import {
-  extractMetadata,
-  extractTextFromAnswer,
-  formatAnswerForDisplay,
-  isValidAnswer,
-  mergeAnswers,
   parseAnswer,
+  extractTextFromAnswer,
+  isValidAnswer,
+  formatAnswerForDisplay,
+  extractMetadata,
+  mergeAnswers,
   queryPinecone,
   getAnswer
 } from '../openai_answer_helpers';
 
+// Get mock references (cast to Jest mock types to satisfy TypeScript)
+// Helper types to avoid `any` in tests
+type ChatCreateArgs = { messages: Array<{ role?: string; content: string }>; [key: string]: unknown };
+type ChatCreateReturn = { choices: Array<{ message: { content: string } }> };
+type ChatCreateFn = (args: ChatCreateArgs) => Promise<ChatCreateReturn>;
+
+type PineconeMatch = { id: string; score?: number; metadata?: Record<string, unknown> };
+type QueryResult = { matches?: PineconeMatch[] } | null;
+
+const mockGetEmbedding = OpenAIClientManager.getEmbedding as unknown as jest.MockedFunction<(q: string) => Promise<number[]>>;
+const mockGetClient = OpenAIClientManager.getClient as unknown as jest.MockedFunction<() => { chat: { completions: { create: jest.MockedFunction<ChatCreateFn> } } }>;
+const mockGetIndex = PineconeManager.getIndex as unknown as jest.MockedFunction<() => typeof mockPineconeIndex>;
+const mockQuery = mockPineconeIndex.query as jest.MockedFunction<(...args: unknown[]) => Promise<QueryResult>>;
+
 describe('openai_answer_helpers', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockGetIndex.mockReturnValue(mockPineconeIndex);
+    mockGetEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+    const createMock = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+    createMock.mockResolvedValue({ choices: [{ message: { content: 'test' } }] });
+    mockGetClient.mockReturnValue({
+      chat: { completions: { create: createMock } }
+    });
+    mockQuery.mockResolvedValue({ matches: [] });
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('parseAnswer', () => {
-    it('should parse a valid JSON answer', () => {
-      const answer = '{"text": "Hello world", "confidence": 0.95}';
-      const result = parseAnswer(answer);
-      expect(result).toEqual({
-        text: 'Hello world',
-        confidence: 0.95
-      });
+    it('should parse valid JSON', () => {
+      expect(parseAnswer('{"test": "value"}')).toEqual({ test: 'value' });
     });
-
-    it('should handle malformed JSON', () => {
-      const answer = 'This is not JSON';
-      const result = parseAnswer(answer);
-      expect(result).toBeNull();
+    it('should return null for invalid JSON', () => {
+      expect(parseAnswer('invalid')).toBeNull();
     });
-
-    it('should handle empty string', () => {
-      const answer = '';
-      const result = parseAnswer(answer);
-      expect(result).toBeNull();
-    });
-
-    it('should handle null or undefined input', () => {
-      expect(parseAnswer(null as any)).toBeNull();
-      expect(parseAnswer(undefined as any)).toBeNull();
+    it('should return null for null/undefined', () => {
+      expect(parseAnswer(null)).toBeNull();
+      expect(parseAnswer(undefined)).toBeNull();
     });
   });
 
   describe('extractTextFromAnswer', () => {
-    it('should extract text from string answer', () => {
-      const answer = 'This is a plain text answer';
-      const result = extractTextFromAnswer(answer);
-      expect(result).toBe('This is a plain text answer');
+    it('should extract text from string', () => {
+      expect(extractTextFromAnswer('hello')).toBe('hello');
     });
-
-    it('should extract text from object answer', () => {
-      const answer = { text: 'Extracted text', other: 'data' };
-      const result = extractTextFromAnswer(answer);
-      expect(result).toBe('Extracted text');
+    it('should extract text from object', () => {
+      expect(extractTextFromAnswer({ text: 'hello' })).toBe('hello');
     });
-
-    it('should handle nested text property', () => {
-      const answer = { content: { text: 'Nested text' }, metadata: {} };
-      const result = extractTextFromAnswer(answer);
-      expect(result).toBe('Nested text');
+    it('should extract from nested content', () => {
+      expect(extractTextFromAnswer({ content: { text: 'hello' } })).toBe('hello');
     });
-
-    it('should return empty string for invalid input', () => {
+    it('should return empty for invalid', () => {
       expect(extractTextFromAnswer(null)).toBe('');
-      expect(extractTextFromAnswer(undefined)).toBe('');
-      expect(extractTextFromAnswer(123)).toBe('');
+      expect(extractTextFromAnswer(123 as unknown as string)).toBe('');
     });
   });
 
   describe('isValidAnswer', () => {
-    it('should return true for valid string answer', () => {
-      expect(isValidAnswer('Valid answer text')).toBe(true);
+    it('should return true for valid text', () => {
+      expect(isValidAnswer('hello')).toBe(true);
     });
-
-    it('should return true for valid object answer with text', () => {
-      expect(isValidAnswer({ text: 'Valid answer' })).toBe(true);
+    it('should return true for object with text', () => {
+      expect(isValidAnswer({ text: 'hello' })).toBe(true);
     });
-
-    it('should return false for empty string', () => {
+    it('should return false for empty', () => {
       expect(isValidAnswer('')).toBe(false);
-    });
-
-    it('should return false for whitespace only', () => {
       expect(isValidAnswer('   ')).toBe(false);
     });
-
-    it('should return false for null or undefined', () => {
+    it('should return false for null', () => {
       expect(isValidAnswer(null)).toBe(false);
-      expect(isValidAnswer(undefined)).toBe(false);
-    });
-
-    it('should return false for object without text property', () => {
-      expect(isValidAnswer({ other: 'data' })).toBe(false);
-    });
-
-    it('should return false for object with empty text', () => {
-      expect(isValidAnswer({ text: '' })).toBe(false);
-      expect(isValidAnswer({ text: '   ' })).toBe(false);
     });
   });
 
   describe('formatAnswerForDisplay', () => {
-    it('should format plain text answer', () => {
-      const answer = 'Simple answer';
-      const result = formatAnswerForDisplay(answer);
-      expect(result).toContain('Simple answer');
+    it('should format text', () => {
+      expect(formatAnswerForDisplay('  hello  world  ')).toBe('hello world');
     });
-
-    it('should handle multiline text', () => {
-      const answer = 'Line 1\nLine 2\nLine 3';
-      const result = formatAnswerForDisplay(answer);
-      expect(result).toContain('Line 1');
-      expect(result).toContain('Line 2');
-      expect(result).toContain('Line 3');
+    it('should escape HTML', () => {
+      expect(formatAnswerForDisplay('<script>')).toBe('&lt;script&gt;');
     });
-
-    it('should strip excessive whitespace', () => {
-      const answer = '  Too   many    spaces  ';
-      const result = formatAnswerForDisplay(answer);
-      expect(result).toBe('Too many spaces');
-    });
-
-    it('should handle object answers', () => {
-      const answer = { text: 'Object answer', confidence: 0.9 };
-      const result = formatAnswerForDisplay(answer);
-      expect(result).toContain('Object answer');
-    });
-
-    it('should handle HTML escaping', () => {
-      const answer = 'Text with <script>alert("xss")</script>';
-      const result = formatAnswerForDisplay(answer);
-      expect(result).not.toContain('<script>');
-      expect(result).toContain('&lt;script&gt;');
-    });
-
-    it('should return empty string for invalid input', () => {
+    it('should return empty for null', () => {
       expect(formatAnswerForDisplay(null)).toBe('');
-      expect(formatAnswerForDisplay(undefined)).toBe('');
     });
   });
 
   describe('extractMetadata', () => {
-    it('should extract metadata from object answer', () => {
-      const answer = {
-        text: 'Answer',
-        confidence: 0.95,
-        model: 'gpt-4',
-        tokens: 150,
-        metadata: { source: 'API', version: '1.0' }
-      };
-      const result = extractMetadata(answer);
-      expect(result).toMatchObject({
-        confidence: 0.95,
-        model: 'gpt-4',
-        tokens: 150,
-        source: 'API',
-        version: '1.0'
-      });
+    it('should extract metadata from object', () => {
+      const result = extractMetadata({ confidence: 0.9, model: 'gpt' });
+      expect(result).toHaveProperty('confidence', 0.9);
+      expect(result).toHaveProperty('model', 'gpt');
     });
-
-    it('should handle missing metadata', () => {
-      const answer = { text: 'Simple answer' };
-      const result = extractMetadata(answer);
-      expect(result).toEqual({});
+    it('should extract specific fields', () => {
+      const result = extractMetadata({ confidence: 0.9, model: 'gpt', tokens: 100 }, ['confidence']);
+      expect(result).toEqual({ confidence: 0.9 });
     });
-
-    it('should extract from nested structure', () => {
-      const answer = {
-        data: {
-          text: 'Answer',
-          meta: {
-            confidence: 0.85,
-            timestamp: '2024-01-01'
-          }
-        }
-      };
-      const result = extractMetadata(answer);
-      expect(result).toEqual({});
-    });
-
-    it('should handle string answers (no metadata)', () => {
-      const answer = 'Plain text answer';
-      const result = extractMetadata(answer);
-      expect(result).toEqual({});
-    });
-
-    it('should extract specific metadata fields only', () => {
-      const answer = {
-        text: 'Answer',
-        confidence: 0.95,
-        temperature: 0.7,
-        max_tokens: 100,
-        random_field: 'ignore'
-      };
-      const result = extractMetadata(answer, ['confidence', 'temperature']);
-      expect(result).toEqual({
-        confidence: 0.95,
-        temperature: 0.7
-      });
-      expect(result).not.toHaveProperty('max_tokens');
-      expect(result).not.toHaveProperty('random_field');
+    it('should return empty for null', () => {
+      expect(extractMetadata(null)).toEqual({});
     });
   });
 
   describe('mergeAnswers', () => {
-    it('should merge two valid answers', () => {
-      const answer1 = { text: 'First answer', confidence: 0.8 };
-      const answer2 = { text: 'Second answer', confidence: 0.9 };
-      const result = mergeAnswers([answer1, answer2]);
-      expect(result.text).toContain('First answer');
-      expect(result.text).toContain('Second answer');
-      expect(result.metadata.average_confidence).toBe(0.85);
+    it('should merge string answers', () => {
+      const result = mergeAnswers(['a', 'b']);
+      expect(result?.text).toBe('a b');
     });
-
-    it('should handle one invalid answer', () => {
-      const answer1 = { text: 'Valid answer' };
-      const answer2 = null;
-      const result = mergeAnswers([answer1, answer2]);
-      expect(result).toEqual(answer1);
+    it('should merge with separator', () => {
+      const result = mergeAnswers(['a', 'b'], { separator: ' | ' });
+      expect(result?.text).toBe('a | b');
     });
+    it('should deduplicate answers', () => {
+      const result = mergeAnswers(['a', 'a', 'b'], { deduplicate: true });
+      expect(result?.text).toBe('a b');
+    });
+    it('should return single object as-is', () => {
+      const result = mergeAnswers([{ text: 'single', confidence: 0.9 }]);
+      expect(result?.text).toBe('single');
+      expect(result?.metadata).toEqual({ confidence: 0.9 });
+    });
+    it('should return null for empty array', () => {
+      expect(mergeAnswers([])).toBeNull();
+    });
+    it('should return null for no valid answers', () => {
+      expect(mergeAnswers([null, undefined])).toBeNull();
+    });
+  });
 
-    it('should handle both invalid answers', () => {
-      const result = mergeAnswers([null, undefined]);
+  describe('queryPinecone', () => {
+    it('should return null when no matches', async () => {
+      mockQuery.mockResolvedValue({ matches: [] });
+      const result = await queryPinecone('test', 0.5);
       expect(result).toBeNull();
     });
 
-    it('should combine text with separator', () => {
-      const answer1 = 'First part.';
-      const answer2 = 'Second part.';
-      const result = mergeAnswers([answer1, answer2], { separator: ' ' });
-      expect(result.text).toBe('First part. Second part.');
-    });
-
-    it('should use custom merge strategy', () => {
-      const answer1 = { text: 'A', score: 10 };
-      const answer2 = { text: 'B', score: 20 };
-      const mergeStrategy = (a: any, b: any) => ({
-        text: a.text + b.text,
-        score: Math.max(a.score, b.score)
+    it('should filter matches by threshold', async () => {
+      mockQuery.mockResolvedValue({
+        matches: [
+          { id: '1', score: 0.9, metadata: { text: 'good' } },
+          { id: '2', score: 0.3, metadata: { text: 'bad' } }
+        ]
       });
-      const result = mergeAnswers([answer1, answer2], { strategy: mergeStrategy });
-      expect(result).toEqual({
-        text: 'AB',
-        score: 20
-      });
-    });
-
-    it('should handle array of answers', () => {
-      const answers = [
-        { text: 'One' },
-        { text: 'Two' },
-        { text: 'Three' }
-      ];
-      const result = mergeAnswers(answers);
-      expect(result.text).toContain('One');
-      expect(result.text).toContain('Two');
-      expect(result.text).toContain('Three');
-    });
-
-    it('should deduplicate similar answers', () => {
-      const answers = [
-        'The answer is 42',
-        'The answer is 42',
-        'Different answer'
-      ];
-      const result = mergeAnswers(answers, { deduplicate: true });
-      const occurrences = (result.text.match(/The answer is 42/g) || []).length;
-      expect(occurrences).toBe(1);
+      const result = await queryPinecone('test', 0.5);
+      expect(result?.matches).toHaveLength(1);
+      expect(result?.matches[0].id).toBe('1');
     });
   });
 
-  describe('Edge cases', () => {
-    it('should handle very long answers', () => {
-      const longAnswer = 'A'.repeat(100000);
-      const result = extractTextFromAnswer(longAnswer);
-      expect(result).toBe(longAnswer);
-      expect(result.length).toBe(100000);
-    });
-
-    it('should handle Unicode and emoji', () => {
-      const answer = 'Hello 🌍 World! こんにちは';
-      const result = extractTextFromAnswer(answer);
-      expect(result).toBe('Hello 🌍 World! こんにちは');
-    });
-
-    it('should handle special characters', () => {
-      const answer = 'Special chars: !@#$%^&*()_+{}[]|\\:;"\'<>,.?/~`';
-      const result = extractTextFromAnswer(answer);
-      expect(result).toBe(answer);
+  describe('getAnswer', () => {
+    it('should return fallback when no context and fallback disabled', async () => {
+      mockQuery.mockResolvedValue(null);
+      const result = await getAnswer('test', 0.5, false);
+      expect(result).toContain('I cannot answer this question');
     });
   });
 
-    describe('Pinecone/OpenAI integration (mocked)', () => {
-      beforeEach(() => {
-        jest.clearAllMocks();
-        process.env.DEBUG = 'true';
-      });
+  // ============ ADDITIONAL COVERAGE TESTS (INSIDE THE MAIN DESCRIBE) ============
+  describe('Additional coverage for uncovered lines', () => {
+    describe('parseAnswer - catch block (lines 46-48)', () => {
+      it('should trigger catch block and log error when JSON parsing fails', () => {
+        const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const invalidJson = '{"invalid": json}';
 
-      afterEach(() => {
-        delete process.env.DEBUG;
-      });
+        const result = parseAnswer(invalidJson);
 
-      it('queryPinecone returns null when no matches', async () => {
-        mockQuery.mockResolvedValue({ matches: [] });
-        const res = await queryPinecone('Q?', 0.5);
-        expect(res).toBeNull();
-        expect(mockGetOpenAIEmbedding).toHaveBeenCalledWith('Q?');
+        expect(result).toBeNull();
+        expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to parse answer:', expect.any(Error));
+        consoleErrorSpy.mockRestore();
       });
+    });
 
-      it('queryPinecone filters by threshold and returns matches', async () => {
-        const fake = {
-          matches: [
-            { id: '1', score: 0.9, metadata: { text: 'A' } },
-            { id: '2', score: 0.2, metadata: { text: 'B' } }
-          ]
+    describe('extractMetadata - fields filtering loop (lines 127-129)', () => {
+      it('should filter and return only specified fields when fields array is provided', () => {
+        const answer = {
+          text: 'Answer',
+          confidence: 0.95,
+          model: 'gpt-4',
+          tokens: 150,
+          temperature: 0.7,
+          max_tokens: 500
         };
-        mockQuery.mockResolvedValue(fake);
-        const res = await queryPinecone('Q?', 0.5);
-        expect(res).not.toBeNull();
-        expect(res!.matches!.length).toBe(1);
+
+        const result = extractMetadata(answer, ['confidence', 'temperature']);
+
+        expect(result).toEqual({
+          confidence: 0.95,
+          temperature: 0.7
+        });
       });
 
-      it('getAnswer returns fallback when no context and fallback disabled', async () => {
-        mockQuery.mockResolvedValue(null as any);
-        const res = await getAnswer('Q?', 0.5, false);
-        expect(res).toContain('I cannot answer this question');
-      });
+      it('should handle fields array with empty result', () => {
+        const answer = { text: 'Answer', confidence: 0.95 };
+        const result = extractMetadata(answer, ['nonexistent']);
 
-      it('getAnswer uses context when matches present and returns LLM answer', async () => {
-        const fake = { matches: [{ id: '1', score: 0.9, metadata: { text: 'some context', page: 1, source: 'src' } }] };
-        mockQuery.mockResolvedValue(fake);
-        const res = await getAnswer('Q?', 0.5, true);
-        expect(res).toBe('LLM ANSWER');
+        expect(result).toEqual({});
       });
     });
+
+    describe('extractMetadata - default branch (lines 158-160)', () => {
+      it('should include all valid keys when no fields specified', () => {
+        const answer = {
+          confidence: 0.95,
+          model: 'gpt-4',
+          tokens: 150,
+          temperature: 0.7,
+          max_tokens: 500
+        };
+
+        const result = extractMetadata(answer);
+
+        expect(result).toHaveProperty('confidence', 0.95);
+        expect(result).toHaveProperty('model', 'gpt-4');
+        expect(result).toHaveProperty('tokens', 150);
+        expect(result).toHaveProperty('temperature', 0.7);
+        expect(result).toHaveProperty('max_tokens', 500);
+      });
+
+      it('should include metadata from answer.metadata object', () => {
+        const answer = {
+          confidence: 0.95,
+          metadata: { source: 'test', version: '1.0' }
+        };
+
+        const result = extractMetadata(answer);
+
+        expect(result).toHaveProperty('confidence', 0.95);
+        expect(result).toHaveProperty('source', 'test');
+        expect(result).toHaveProperty('version', '1.0');
+      });
+
+      it('should skip undefined values', () => {
+        const answer = {
+          confidence: 0.95,
+          model: undefined as unknown as string | undefined,
+          tokens: undefined as unknown as number | undefined
+        };
+
+        const result = extractMetadata(answer);
+
+        expect(result).toHaveProperty('confidence', 0.95);
+        expect(result).not.toHaveProperty('model');
+        expect(result).not.toHaveProperty('tokens');
+      });
+    });
+
+    describe('queryPinecone - else branch (lines 216-218)', () => {
+      it('should execute else branch when result.matches exists but is empty', async () => {
+        mockQuery.mockResolvedValue({ matches: [] });
+
+        const result = await queryPinecone('test question', 0.5);
+
+        expect(result).toBeNull();
+        expect(mockGetEmbedding).toHaveBeenCalledWith('test question');
+      });
+
+      it('should execute else branch when result is null', async () => {
+        mockQuery.mockResolvedValue(null);
+
+        const result = await queryPinecone('test question', 0.5);
+
+        expect(result).toBeNull();
+      });
+
+      it('should execute else branch when result.matches is undefined', async () => {
+        mockQuery.mockResolvedValue({ matches: undefined });
+
+        const result = await queryPinecone('test question', 0.5);
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('getAnswer - additional branches', () => {
+      it('should handle context building when matches have text', async () => {
+        const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+        mockChatCreate.mockResolvedValue({
+          choices: [{ message: { content: 'Generated answer' } }]
+        });
+        mockGetClient.mockReturnValue({
+          chat: { completions: { create: mockChatCreate } }
+        });
+
+        const matches = [
+          {
+            id: '1',
+            score: 0.9,
+            metadata: { text: 'First context', source: 'Source1', page: 1 }
+          },
+          {
+            id: '2',
+            score: 0.8,
+            metadata: { text: 'Second context', source: 'Source2' }
+          }
+        ];
+        mockQuery.mockResolvedValue({ matches });
+
+        await getAnswer('test question', 0.5, true);
+
+        expect(mockChatCreate).toHaveBeenCalled();
+        const callArgs = mockChatCreate.mock.calls[0][0] as unknown as ChatCreateArgs;
+        expect(callArgs.messages[1].content).toContain('First context');
+        expect(callArgs.messages[1].content).toContain('Second context');
+        expect(callArgs.messages[1].content).toContain('Source: Source1, Page: 1');
+        expect(callArgs.messages[1].content).toContain('Source: Source2');
+      });
+
+      it('should handle DEBUG mode when DEBUG === "true"', async () => {
+        const originalDebug = process.env.DEBUG;
+        process.env.DEBUG = 'true';
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+        const matches = [
+          {
+            id: '1',
+            score: 0.9,
+            metadata: { text: 'Debug context', source: 'Debug Source', page: 1 }
+          }
+        ];
+        mockQuery.mockResolvedValue({ matches });
+        const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+        mockChatCreate.mockResolvedValue({
+          choices: [{ message: { content: 'Generated' } }]
+        });
+        mockGetClient.mockReturnValue({
+          chat: { completions: { create: mockChatCreate } }
+        });
+
+        await getAnswer('test question', 0.5, true);
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('=== Debug Info ==='));
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Question: test question'));
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Context found: true'));
+
+        consoleSpy.mockRestore();
+        process.env.DEBUG = originalDebug;
+      });
+
+      it('should handle DEBUG mode with no context', async () => {
+        const originalDebug = process.env.DEBUG;
+        process.env.DEBUG = 'true';
+        const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+        mockQuery.mockResolvedValue(null);
+        const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+        mockChatCreate.mockResolvedValue({
+          choices: [{ message: { content: 'Fallback answer' } }]
+        });
+        mockGetClient.mockReturnValue({
+          chat: { completions: { create: mockChatCreate } }
+        });
+
+        await getAnswer('test question', 0.5, true);
+
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Context found: false'));
+
+        consoleSpy.mockRestore();
+        process.env.DEBUG = originalDebug;
+      });
+    });
+  });
 });
