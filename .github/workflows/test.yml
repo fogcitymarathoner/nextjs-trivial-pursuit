@@ -1,9 +1,7 @@
 name: Run Jest Tests
 
 on:
-  push:
-    branches-ignore:
-      - master
+  push:            # works on any local push to origin
   pull_request:
     branches:
       - master
