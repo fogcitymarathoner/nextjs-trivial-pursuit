@@ -5,7 +5,7 @@ import * as path from "path";
 jest.mock("path");
 
 // Mock env
-jest.mock("@/config/env", () => ({
+jest.mock("@/config/env.server", () => ({
   CLIENT_SECRET_FILE: "/path/to/service-account-key.json",
 }));
 
@@ -34,7 +34,7 @@ jest.mock("googleapis", () => ({
 }));
 
 // Now import everything
-import { describe, expect, it, beforeEach, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 import { google } from "googleapis";
 
 // Replace the mock implementations after import

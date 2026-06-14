@@ -1,12 +1,14 @@
 import { getAnswer } from "@/lib/openai_answer_helpers";
-import { DEFAULT_THRESHOLD } from "@/config/env";
+import { PINECONE_INDEXES, getIndexNameByLabel } from "@/config/pinecone/pinecone_indexes";
 
-// To run - npx tsx scripts/test_answer.ts [options]
+// To run - npx tsx scripts/test_answer.ts --env-file .env.local [options]
 // Examples:
-//   npx tsx scripts/test_answer.ts                              # Uses default threshold 0.4, fallback ON
-//   npx tsx scripts/test_answer.ts --threshold 0.7              # Uses threshold 0.7, fallback ON
+//   npx tsx scripts/test_answer.ts                              # Uses default threshold 0.4, fallback ON, default index
+//   npx tsx scripts/test_answer.ts --threshold 0.7              # Uses threshold 0.7, fallback ON, default index
 //   npx tsx scripts/test_answer.ts --fallback false             # Disable fallback to general knowledge
 //   npx tsx scripts/test_answer.ts -f false                     # Short form for fallback
+//   npx tsx scripts/test_answer.ts --pinecone-index documents   # Use specific Pinecone index
+//   npx tsx scripts/test_answer.ts -p presidents                # Short form for pinecone index
 //   npx tsx scripts/test_answer.ts --help                       # Shows help
 //   npx tsx scripts/test_answer.ts -t 0.8                       # Short form for threshold
 
@@ -14,11 +16,20 @@ interface TestConfig {
   threshold: number;
   customQuestion?: string;
   showHelp: boolean;
-  fallback: boolean;  // Add fallback flag
+  fallback: boolean;
+  pineconeIndexLabel: string;
 }
 
 const MIN_THRESHOLD = 0.0;
 const MAX_THRESHOLD = 1.0;
+
+// Get available indexes for help display
+const AVAILABLE_INDEXES = PINECONE_INDEXES.map(idx => `${idx.label} (${idx.indexName})`).join(', ');
+const DEFAULT_INDEX_LABEL = PINECONE_INDEXES[0]?.label || 'Presidents';
+
+function findIndexByInput(input: string) {
+  return PINECONE_INDEXES.find(index => index.label === input || index.indexName === input);
+}
 
 function showHelp(): void {
   console.log(`
@@ -29,7 +40,7 @@ USAGE:
   npx tsx scripts/test_answer.ts [options]
 
 OPTIONS:
-  -t, --threshold <number>    Similarity threshold (default: ${DEFAULT_THRESHOLD})
+  -t, --threshold <number>    Similarity threshold (default: ${process.env.DEFAULT_THRESHOLD})
                               Range: ${MIN_THRESHOLD} - ${MAX_THRESHOLD}
   
   -q, --question <string>     Single question to test (optional)
@@ -39,21 +50,27 @@ OPTIONS:
                               Values: true (default) or false
                               When false, refuses to answer without context
   
+  -p, --pinecone-index <string>  Pinecone index label or name to query (default: ${DEFAULT_INDEX_LABEL})
+                              Available indexes: ${AVAILABLE_INDEXES}
+  
   -h, --help                  Show this help message
 
 EXAMPLES:
-  # Run with default threshold and fallback ON
+  # Run with default settings (default index)
   npx tsx scripts/test_answer.ts
 
-  # Run with fallback OFF (no general knowledge)
-  npx tsx scripts/test_answer.ts --fallback false
-  npx tsx scripts/test_answer.ts -f false
+  # Use a specific Pinecone index
+  npx tsx scripts/test_answer.ts --pinecone-index presidents
+  npx tsx scripts/test_answer.ts -p documents
 
-  # Run with custom threshold and fallback OFF
-  npx tsx scripts/test_answer.ts -t 0.7 -f false
+  # Run with fallback OFF and specific index
+  npx tsx scripts/test_answer.ts --fallback false --pinecone-index presidents
 
-  # Test a specific question with custom threshold and no fallback
-  npx tsx scripts/test_answer.ts -t 0.6 -q "What is the capital of France?" -f false
+  # Run with custom threshold, specific index, and fallback OFF
+  npx tsx scripts/test_answer.ts -t 0.7 -p presidents -f false
+
+  # Test a specific question with custom index and no fallback
+  npx tsx scripts/test_answer.ts -t 0.6 -q "What is the capital of France?" -f false -p documents
 
   # Test a specific question with default threshold and fallback ON
   npx tsx scripts/test_answer.ts -q "Who wrote Romeo and Juliet?"
@@ -65,10 +82,11 @@ EXAMPLES:
 NOTES:
   - Higher threshold = stricter matching (0.7-0.9)
   - Lower threshold = more results but potentially less relevant (0.1-0.3)
-  - Default ${DEFAULT_THRESHOLD} is balanced for most use cases
+  - Default ${process.env.DEFAULT_THRESHOLD} is balanced for most use cases
   - Threshold must be between ${MIN_THRESHOLD} and ${MAX_THRESHOLD}
   - Fallback=true allows GPT to use its general knowledge when no context found
   - Fallback=false forces answers to come ONLY from provided context
+  - Pinecone index determines which vector database to query for context
 
 ${"=".repeat(60)}
   `);
@@ -77,9 +95,10 @@ ${"=".repeat(60)}
 function parseArguments(): TestConfig {
   const args = process.argv.slice(2);
   const config: TestConfig = {
-    threshold: Number(DEFAULT_THRESHOLD),
+    threshold: Number(process.env.DEFAULT_THRESHOLD),
     showHelp: false,
-    fallback: false  // Default to false
+    fallback: false,
+    pineconeIndexLabel: DEFAULT_INDEX_LABEL
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -115,6 +134,26 @@ function parseArguments(): TestConfig {
       continue;
     }
 
+    if (arg === '-p' || arg === '--pinecone-index') {
+      const indexInput = args[i + 1];
+      if (!indexInput) {
+        console.error(`❌ Error: Pinecone index name is required`);
+        process.exit(1);
+      }
+
+      // Validate the index exists
+      const indexConfig = findIndexByInput(indexInput);
+      if (!indexConfig) {
+        console.error(`❌ Error: Invalid pinecone index '${indexInput}'`);
+        console.log(`   Available indexes: ${AVAILABLE_INDEXES}`);
+        process.exit(1);
+      }
+
+      config.pineconeIndexLabel = indexConfig.label;
+      i++; // Skip next argument
+      continue;
+    }
+
     if (arg === '-q' || arg === '--question') {
       config.customQuestion = args[i + 1];
       i++; // Skip next argument
@@ -136,10 +175,14 @@ async function runTests(config: TestConfig): Promise<void> {
 
   const questions = config.customQuestion ? [config.customQuestion] : defaultTestQuestions;
 
+  // Get the index configuration for display
+  const indexName = getIndexNameByLabel(config.pineconeIndexLabel);
+
   console.log(`\n🎯 Running tests with:`);
   console.log(`   📊 Similarity threshold: ${config.threshold}`);
   console.log(`   🔄 Fallback to general knowledge: ${config.fallback ? 'ON' : 'OFF'}`);
-  console.log(`📊 Range: ${MIN_THRESHOLD} - ${MAX_THRESHOLD} | Default threshold: ${DEFAULT_THRESHOLD}`);
+  console.log(`   🗄️  Pinecone index: ${config.pineconeIndexLabel} (${indexName})`);
+  console.log(`📊 Range: ${MIN_THRESHOLD} - ${MAX_THRESHOLD} | Default threshold: ${process.env.DEFAULT_THRESHOLD}`);
   console.log("=".repeat(80));
 
   let successCount = 0;
@@ -150,12 +193,19 @@ async function runTests(config: TestConfig): Promise<void> {
       console.log(`\n📝 Question: ${question}`);
       console.log("⏳ Generating answer...");
 
-      // Pass fallback parameter to getAnswer
-      const answer = await getAnswer(question, config.threshold, config.fallback);
+      // Pass fallback parameter and pinecone index to getAnswer
+      // Assuming getAnswer signature is: getAnswer(question, threshold, fallback, pineconeIndex?)
+      const answer = await getAnswer(
+        question,
+        config.threshold,
+        config.fallback,
+        config.pineconeIndexLabel
+      );
 
       console.log(`\n✅ Answer: ${answer}`);
       console.log(`📊 Used threshold: ${config.threshold}`);
       console.log(`🔄 Fallback mode: ${config.fallback ? 'Allowed' : 'Disabled'}`);
+      console.log(`🗄️  Used index: ${config.pineconeIndexLabel} (${indexName})`);
       console.log(`📏 Answer length: ${answer.length} characters`);
       successCount++;
     } catch (error) {
@@ -174,6 +224,7 @@ async function runTests(config: TestConfig): Promise<void> {
   console.log(`❌ Failed: ${failCount}`);
   console.log(`🎯 Threshold used: ${config.threshold}`);
   console.log(`🔄 Fallback mode: ${config.fallback ? 'ON (general knowledge allowed)' : 'OFF (context only)'}`);
+  console.log(`🗄️  Pinecone index: ${config.pineconeIndexLabel} (${indexName})`);
   console.log(`📝 Total questions: ${questions.length}`);
   console.log("=".repeat(80));
 

@@ -3,16 +3,16 @@ import {
   PINECONE_API_KEY,
   PINECONE_INDEX_DEV,
   VECTOR_SIZE,
-} from "@/config/env";
+} from "@/config/env.server";
 
 class PineconeManager {
   private static instance: PineconeManager | null = null;
   private client: Pinecone | null = null;
-  private index: Index<RecordMetadata> | null = null;
-  private indexName: string;
+  private indexes: Map<string, Index<RecordMetadata>> = new Map(); // Cache multiple indexes
+  private defaultIndexName: string;
 
   private constructor() {
-    this.indexName = PINECONE_INDEX_DEV!;
+    this.defaultIndexName = PINECONE_INDEX_DEV!;
   }
 
   public static getInstance(): PineconeManager {
@@ -29,15 +29,39 @@ class PineconeManager {
     return this.client;
   }
 
-  public getIndex(): Index<RecordMetadata> {
-    if (!this.index) {
-      this.index = this.getClient().index({ name: this.indexName });
+  /**
+   * Get a specific index by name, or return the default index
+   * @param indexName Optional name of the index to retrieve
+   * @returns Pinecone Index instance
+   */
+  public getIndex(indexName?: string): Index<RecordMetadata> {
+    const nameToUse = indexName || this.defaultIndexName;
+
+    // Check if we already have this index cached
+    if (!this.indexes.has(nameToUse)) {
+      console.log(`📦 Creating new index instance for: ${nameToUse}`);
+      const index = this.getClient().index({ name: nameToUse });
+      this.indexes.set(nameToUse, index);
     }
-    return this.index;
+
+    return this.indexes.get(nameToUse)!;
   }
 
-  public async query(questionEmbedding: number[], topK: number = 3, includeMetadata: boolean = true): Promise<any> {
-    return this.getIndex().query({
+  /**
+   * Query a specific index
+   * @param questionEmbedding The embedding vector to query
+   * @param topK Number of results to return (default: 3)
+   * @param includeMetadata Whether to include metadata (default: true)
+   * @param indexName Optional name of the index to query (uses default if not provided)
+   */
+  public async query(
+    questionEmbedding: number[],
+    topK: number = 3,
+    includeMetadata: boolean = true,
+    indexName?: string  // Add this parameter
+  ): Promise<any> {
+    const index = this.getIndex(indexName);
+    return index.query({
       vector: questionEmbedding,
       topK,
       includeValues: false,
@@ -45,48 +69,99 @@ class PineconeManager {
     });
   }
 
-  public async upsert(vectors: Array<{
-    id: string;
-    values: number[];
-    metadata?: RecordMetadata;
-  }>): Promise<void> {
-    await this.getIndex().upsert({ records: vectors });
+  /**
+   * Upsert vectors to a specific index
+   * @param vectors Array of vectors to upsert
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async upsert(
+    vectors: Array<{
+      id: string;
+      values: number[];
+      metadata?: RecordMetadata;
+    }>,
+    indexName?: string  // Add this parameter
+  ): Promise<void> {
+    const index = this.getIndex(indexName);
+    await index.upsert({ records: vectors });
   }
 
-  public async deleteOne(id: string): Promise<void> {
-    await this.getIndex().deleteOne({ id });
+  /**
+   * Delete a single record from a specific index
+   * @param id The ID of the record to delete
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async deleteOne(id: string, indexName?: string): Promise<void> {
+    const index = this.getIndex(indexName);
+    await index.deleteOne({ id });
   }
 
-  public async deleteMany(ids: string[]): Promise<void> {
-    await this.getIndex().deleteMany({ ids });
+  /**
+   * Delete multiple records from a specific index
+   * @param ids Array of IDs to delete
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async deleteMany(ids: string[], indexName?: string): Promise<void> {
+    const index = this.getIndex(indexName);
+    await index.deleteMany({ ids });
   }
 
-  public async deleteAll(): Promise<void> {
-    await this.getIndex().deleteAll();
+  /**
+   * Delete all records from a specific index
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async deleteAll(indexName?: string): Promise<void> {
+    const index = this.getIndex(indexName);
+    await index.deleteAll();
   }
 
-  public async describeIndexStats(): Promise<any> {
-    return this.getIndex().describeIndexStats();
+  /**
+   * Get statistics for a specific index
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async describeIndexStats(indexName?: string): Promise<any> {
+    const index = this.getIndex(indexName);
+    return index.describeIndexStats();
   }
 
-  public async fetch(ids: string[]): Promise<any> {
-    return this.getIndex().fetch({ ids });
+  /**
+   * Fetch records by IDs from a specific index
+   * @param ids Array of IDs to fetch
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async fetch(ids: string[], indexName?: string): Promise<any> {
+    const index = this.getIndex(indexName);
+    return index.fetch({ ids });
   }
 
-  public async listPaginated(options?: { prefix?: string; limit?: number; paginationToken?: string }): Promise<any> {
-    return this.getIndex().listPaginated(options);
+  /**
+   * List records with pagination from a specific index
+   * @param options Pagination options
+   * @param indexName Optional name of the index (uses default if not provided)
+   */
+  public async listPaginated(
+    options?: { prefix?: string; limit?: number; paginationToken?: string },
+    indexName?: string
+  ): Promise<any> {
+    const index = this.getIndex(indexName);
+    return index.listPaginated(options);
   }
 
+  /**
+   * Create a new index
+   * @param name Index name (required)
+   * @param dimension Vector dimension (defaults to VECTOR_SIZE)
+   * @param metric Distance metric (default: "cosine")
+   */
   public async createIndex(
-    name?: string,
+    name: string,  // Make name required
     dimension?: number,
     metric: "cosine" | "euclidean" | "dotproduct" = "cosine"
   ): Promise<void> {
-    const indexName = name || this.indexName;
     const dimensionValue = dimension || Number(VECTOR_SIZE);
 
     await this.getClient().createIndex({
-      name: indexName,
+      name: name,
       dimension: dimensionValue,
       metric,
       spec: {
@@ -98,37 +173,51 @@ class PineconeManager {
     });
   }
 
-  public async deleteIndex(name?: string): Promise<void> {
-    const indexName = name || this.indexName;
-    await this.getClient().deleteIndex(indexName);
-    // Reset the index if it was the current one
-    if (this.index && this.indexName === indexName) {
-      this.index = null;
+  /**
+   * Delete an index by name
+   * @param name Index name to delete (required)
+   */
+  public async deleteIndex(name: string): Promise<void> {
+    await this.getClient().deleteIndex(name);
+    // Remove from cache if it exists
+    if (this.indexes.has(name)) {
+      this.indexes.delete(name);
     }
   }
 
-  public async indexExists(name?: string): Promise<boolean> {
-    const indexName = name || this.indexName;
+  /**
+   * Check if an index exists
+   * @param name Index name to check (required)
+   */
+  public async indexExists(name: string): Promise<boolean> {
     const indexes = await this.getClient().listIndexes();
-    return indexes.indexes?.some(idx => idx.name === indexName) || false;
+    return indexes.indexes?.some(idx => idx.name === name) || false;
   }
 
+  /**
+   * List all indexes
+   */
   public async listIndexes(): Promise<any> {
     return this.getClient().listIndexes();
   }
 
+  /**
+   * Recreate an index (delete and create)
+   * @param name Index name to recreate (required)
+   * @param dimension Vector dimension
+   * @param metric Distance metric
+   */
   public async recreateIndex(
-    name?: string,
+    name: string,  // Make name required
     dimension?: number,
     metric: "cosine" | "euclidean" | "dotproduct" = "cosine"
   ): Promise<void> {
-    const indexName = name || this.indexName;
     const dimensionValue = dimension || Number(VECTOR_SIZE);
 
     // Check if index exists and delete it
-    if (await this.indexExists(indexName)) {
-      console.log(`Deleting index: ${indexName}`);
-      await this.deleteIndex(indexName);
+    if (await this.indexExists(name)) {
+      console.log(`Deleting index: ${name}`);
+      await this.deleteIndex(name);
 
       // Wait for deletion to propagate
       console.log("Waiting for index deletion to propagate...");
@@ -138,7 +227,7 @@ class PineconeManager {
       let stillExists = true;
       let retries = 0;
       while (stillExists && retries < 10) {
-        stillExists = await this.indexExists(indexName);
+        stillExists = await this.indexExists(name);
         if (stillExists) {
           console.log(`Index still deleting... waiting 10 more seconds`);
           await new Promise(resolve => setTimeout(resolve, 10000));
@@ -148,53 +237,86 @@ class PineconeManager {
     }
 
     // Create new index
-    console.log(`Creating index: ${indexName}`);
-    await this.createIndex(indexName, dimensionValue, metric);
+    console.log(`Creating index: ${name}`);
+    await this.createIndex(name, dimensionValue, metric);
 
     // Wait for index to be ready
     console.log("Waiting for index to initialize...");
     await new Promise(resolve => setTimeout(resolve, 30000));
 
-    console.log(`✅ Index ${indexName} ready!`);
+    console.log(`✅ Index ${name} ready!`);
 
-    // Reset index reference so it will be recreated on next getIndex()
-    this.index = null;
+    // Remove from cache so it will be recreated on next getIndex()
+    this.indexes.delete(name);
   }
 
+  /**
+   * Ensure an index exists, create if it doesn't
+   * @param name Index name to check/create (required)
+   * @param dimension Vector dimension
+   * @param metric Distance metric
+   */
   public async ensureIndexExists(
-    name?: string,
+    name: string,  // Make name required
     dimension?: number,
     metric: "cosine" | "euclidean" | "dotproduct" = "cosine"
   ): Promise<void> {
-    const indexName = name || this.indexName;
     const dimensionValue = dimension || Number(VECTOR_SIZE);
 
-    const exists = await this.indexExists(indexName);
+    const exists = await this.indexExists(name);
 
     if (!exists) {
-      console.log(`Creating index: ${indexName}`);
-      await this.createIndex(indexName, dimensionValue, metric);
+      console.log(`Creating index: ${name}`);
+      await this.createIndex(name, dimensionValue, metric);
 
       console.log("Waiting for index to initialize...");
       await new Promise(resolve => setTimeout(resolve, 30000));
-      console.log(`✅ Index ${indexName} created!`);
+      console.log(`✅ Index ${name} created!`);
     } else {
-      console.log(`✅ Index ${indexName} already exists`);
+      console.log(`✅ Index ${name} already exists`);
     }
   }
 
+  /**
+   * Set the default index name
+   * @param name Default index name to use
+   */
+  public setDefaultIndexName(name: string): void {
+    this.defaultIndexName = name;
+  }
+
+  /**
+   * Get the current default index name
+   */
+  public getDefaultIndexName(): string {
+    return this.defaultIndexName;
+  }
+
+  // For testing purposes
   public setClient(client: Pinecone | null): void {
     this.client = client;
   }
 
-  public setIndex(index: Index<RecordMetadata> | null): void {
-    this.index = index;
+  // For testing purposes
+  public setIndex(index: Index<RecordMetadata> | null, indexName?: string): void {
+    const nameToUse = indexName || this.defaultIndexName;
+
+    if (index) {
+      this.indexes.set(nameToUse, index);
+    } else {
+      this.indexes.delete(nameToUse);
+    }
   }
 
+  // Backward-compatible alias for tests that predate multiple index support.
   public setIndexName(name: string): void {
-    this.indexName = name;
-    // Reset the index since the name changed
-    this.index = null;
+    this.setDefaultIndexName(name);
+    this.clearIndexCache();
+  }
+
+  // Clear index cache (useful for testing)
+  public clearIndexCache(): void {
+    this.indexes.clear();
   }
 }
 

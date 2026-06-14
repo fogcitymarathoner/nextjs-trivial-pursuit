@@ -1,8 +1,8 @@
 // lib/__tests__/pinecone-simple.test.ts
-import { describe, expect, it, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 
 // Mock config
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   PINECONE_API_KEY: 'test-key',
   PINECONE_INDEX_DEV: 'test-index',
 }));

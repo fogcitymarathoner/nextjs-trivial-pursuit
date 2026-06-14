@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { EMBEDDING_MODEL } from "@/config/env";
+import { EMBEDDING_MODEL } from "@/config/env.server";
 
 class OpenAIClientManager {
   private static instance: OpenAIClientManager | null = null;

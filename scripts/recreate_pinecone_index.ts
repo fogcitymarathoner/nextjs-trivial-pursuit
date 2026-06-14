@@ -1,4 +1,4 @@
-import {PINECONE_INDEX_DEV} from "@/config/env";
+import {PINECONE_INDEX_DEV} from "@/config/env.server";
 import PineconeManager from "@/lib/PineconeManager";
 // To run - npx tsx scripts/recreate_pinecone_index.ts
 

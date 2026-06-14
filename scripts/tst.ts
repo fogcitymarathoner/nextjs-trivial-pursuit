@@ -1,5 +1,5 @@
-import '../config/env'
-import {DEBUG} from "@/config/env";
+import '../config/env.server'
+import {DEBUG} from "@/config/env.server";
 import OpenAIClientManager from '@/lib/OpenAIClientManager';
 
   // To run - npx tsx scripts/tst.ts

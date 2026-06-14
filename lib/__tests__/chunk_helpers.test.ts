@@ -1,4 +1,4 @@
-import {beforeEach, describe, expect, it, jest} from '@jest/globals';
+import '@testing-library/jest-dom';
 import type OpenAI from 'openai';
 import {generateChunkId, processChunkMetadata} from "../chunk_helpers";
 import OpenAIClientManager from "@/lib/OpenAIClientManager"
@@ -14,16 +14,16 @@ jest.mock("@/lib/OpenAIClientManager", () => ({
   __esModule: true,
   default: {
     getClient: jest.fn(),
-    embed: jest.fn<() => Promise<number[]>>(),
+    embed: jest.fn() as unknown as jest.MockedFunction<() => Promise<number[]>>,
   }
 }));
 
-jest.mock("@/config/env", () => ({
+jest.mock("@/config/env.server", () => ({
   EMBEDDING_MODEL: "text-embedding-ada-002",
 }));
 
 // Properly typed mock
-const mockEmbeddingsCreate = jest.fn<() => Promise<EmbeddingsResponse>>();
+const mockEmbeddingsCreate = jest.fn() as unknown as jest.MockedFunction<() => Promise<EmbeddingsResponse>>;
 
 // Create a properly typed mock OpenAI client
 const mockOpenAIClient = {
