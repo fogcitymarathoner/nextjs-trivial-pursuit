@@ -2,12 +2,6 @@ name: Run Jest Tests
 
 on:
   push:            # works on any local push to origin
-  pull_request:
-    branches:
-      - master
-  pull_request_target:
-    branches:
-      - master
 
 env:
   NODE_ENV: test
@@ -21,6 +15,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # Skip this workflow for pull requests
+    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
 
     steps:
       - name: Checkout code
