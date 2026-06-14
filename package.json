@@ -35,6 +35,7 @@
     "@types/node": "^25.9.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "critters": "^0.0.25",
     "cross-fetch": "^4.1.0",
     "domhandler": "^6.0.1",
     "dotenv-cli": "^11.0.0",
