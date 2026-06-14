@@ -1,19 +1,26 @@
 # syntax=docker/dockerfile:1.4
-# Use Node.js Alpine as the base image
-FROM node:20-alpine AS base
+# Use Debian-based Node.js image (better compatibility with native modules)
+FROM node:20-slim AS base
+
+# Install system dependencies if needed (optional, uncomment if required)
+# RUN apt-get update && apt-get install -y \
+#     python3 \
+#     make \
+#     g++ \
+#     && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Copy package files
 COPY package.json yarn.lock ./
 
-# Install ALL dependencies - skip platform-specific binaries
+# Install ALL dependencies with cache optimization
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
     --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile --production=false --ignore-optional --ignore-platform
+    yarn install --frozen-lockfile --production=false && \
+    yarn cache clean
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -31,34 +38,36 @@ ENV NODE_ENV=production
 RUN --mount=type=cache,target=/app/.next/cache \
     yarn build
 
-# Production image - use the same node_modules from builder
+# Production image
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
 
-# Copy node_modules from deps stage (already has all dependencies)
-COPY --from=deps /app/node_modules ./node_modules
+# Create non-root user
+RUN groupadd --system --gid 1001 nodejs && \
+    useradd --system --uid 1001 nextjs
+
+# Copy built application
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
+COPY --from=deps /app/node_modules ./node_modules
 COPY package.json yarn.lock ./
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
 
 # Switch to non-root user
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-# Start the application
 CMD ["node", "server.js"]
