@@ -1,11 +1,11 @@
 // lib/__tests__/OpenAIClientManager.test.ts
-import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 import OpenAI from 'openai';
 import { OpenAIClientManager } from '@/lib/OpenAIClientManager';
 import OpenAIClientManagerInstance from '@/lib/OpenAIClientManager';
 
 // Mock environment variables
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   EMBEDDING_MODEL: 'text-embedding-3-small',
   CHAT_MODEL: 'gpt-3.5-turbo',
 }));
@@ -21,8 +21,8 @@ type MockChatCompletionResponse = {
   usage?: { prompt_tokens: number; total_tokens: number };
 };
 
-const mockEmbeddingsCreate = jest.fn<() => Promise<MockEmbeddingResponse>>();
-const mockChatCompletionsCreate = jest.fn<() => Promise<MockChatCompletionResponse>>();
+const mockEmbeddingsCreate = jest.fn() as unknown as jest.MockedFunction<() => Promise<MockEmbeddingResponse>>;
+const mockChatCompletionsCreate = jest.fn() as unknown as jest.MockedFunction<() => Promise<MockChatCompletionResponse>>;
 
 jest.mock('openai', () => ({
   __esModule: true,

@@ -5,21 +5,22 @@
 import { fetchWithRetry } from '../wiki_helpers';
 
 describe('wiki_helpers non-test branch', () => {
-  const originalEnv = process.env.NODE_ENV;
+  const originalEnv = process.env;
 
   beforeEach(() => {
     jest.resetModules();
     // Use fake timers to control sleep()
     jest.useFakeTimers();
-    // Use test mode to make retries immediate and deterministic for tests
-    (process.env as any).NODE_ENV = 'test';
-    process.env.WIKI_HELPERS_RETRY_BASE_MS = '10';
+    jest.replaceProperty(process, 'env', {
+      ...originalEnv,
+      NODE_ENV: 'development',
+      WIKI_HELPERS_RETRY_BASE_MS: '10',
+    });
   });
 
   afterEach(() => {
     jest.useRealTimers();
-    (process.env as any).NODE_ENV = originalEnv as any;
-    delete process.env.WIKI_HELPERS_RETRY_BASE_MS;
+    jest.restoreAllMocks();
   });
 
   it('retries on 429 with retry-after header then succeeds', async () => {
@@ -32,7 +33,7 @@ describe('wiki_helpers non-test branch', () => {
       statusText: 'Too Many Requests',
       headers: retryHeaders,
       json: jest.fn().mockResolvedValue({}),
-    } as any;
+    } as unknown as Response;
 
     const successResponse = {
       ok: true,
@@ -40,26 +41,18 @@ describe('wiki_helpers non-test branch', () => {
       statusText: 'OK',
       headers: new Headers(),
       json: jest.fn().mockResolvedValue({ title: 'A', extract: 'B' }),
-    } as any;
+    } as unknown as Response;
 
     const mockFetch = jest.fn()
       .mockResolvedValueOnce(rateLimitResponse)
       .mockResolvedValueOnce(successResponse);
 
-    // @ts-ignore
     global.fetch = mockFetch;
 
     const p = fetchWithRetry<{ title: string }>('http://example', {});
 
-    // advance timers to allow retry-after sleep (1s)
-    jest.advanceTimersByTime(1000);
-    if (typeof (jest as any).runAllTimersAsync === 'function') {
-      await (jest as any).runAllTimersAsync();
-    } else {
-      jest.runOnlyPendingTimers();
-    }
-    // allow microtasks
     await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(1000);
 
     const result = await p;
     expect(result.title).toBe('A');
@@ -74,10 +67,9 @@ describe('wiki_helpers non-test branch', () => {
       statusText: 'Not Found',
       headers: new Headers(),
       json: jest.fn().mockResolvedValue({}),
-    } as any;
+    } as unknown as Response;
 
     const mockFetch = jest.fn().mockResolvedValue(badResponse);
-    // @ts-ignore
     global.fetch = mockFetch;
 
 
@@ -85,38 +77,35 @@ describe('wiki_helpers non-test branch', () => {
     // Attach the rejection assertion early so the rejection is observed by the test harness
     const expectPromise = expect(p).rejects.toThrow(/Failed after 3 attempts/);
 
-    // advance through retries (base ms=10, doubled each time)
-    jest.advanceTimersByTime(10);
-    if (typeof (jest as any).runAllTimersAsync === 'function') {
-      await (jest as any).runAllTimersAsync();
-    } else {
-      jest.runOnlyPendingTimers();
-    }
     await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(10);
+    await jest.advanceTimersByTimeAsync(20);
+    await jest.runAllTimersAsync();
 
-    jest.advanceTimersByTime(20);
-    if (typeof (jest as any).runAllTimersAsync === 'function') {
-      await (jest as any).runAllTimersAsync();
-    } else {
-      jest.runOnlyPendingTimers();
-    }
-    await Promise.resolve();
-
-    jest.advanceTimersByTime(40);
-    if (typeof (jest as any).runAllTimersAsync === 'function') {
-      await (jest as any).runAllTimersAsync();
-    } else {
-      jest.runOnlyPendingTimers();
-    }
-    await Promise.resolve();
-
-    // Run any remaining timers so the zero-delay rejection executes under fake timers
-    if (typeof (jest as any).runAllTimersAsync === 'function') {
-      await (jest as any).runAllTimersAsync();
-    } else {
-      jest.runOnlyPendingTimers();
-    }
     await expectPromise;
     expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries network errors in non-test mode and then succeeds', async () => {
+    const successResponse = {
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      headers: new Headers(),
+      json: jest.fn().mockResolvedValue({ title: 'Recovered' }),
+    } as unknown as Response;
+
+    const mockFetch = jest.fn()
+      .mockRejectedValueOnce(new Error('temporary-fail'))
+      .mockResolvedValueOnce(successResponse);
+    global.fetch = mockFetch;
+
+    const p = fetchWithRetry<{ title: string }>('http://example', {}, 2);
+
+    await Promise.resolve();
+    await jest.advanceTimersByTimeAsync(10);
+
+    await expect(p).resolves.toEqual({ title: 'Recovered' });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

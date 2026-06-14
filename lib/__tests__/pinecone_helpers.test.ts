@@ -2,10 +2,10 @@
  * @jest-environment node
  */
 
-import { describe, expect, it, jest, beforeEach, afterEach } from '@jest/globals';
+import '@testing-library/jest-dom';
 import PineconeManager from '../PineconeManager';
 
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   PINECONE_API_KEY: 'test-pinecone-api-key',
   PINECONE_INDEX_DEV: 'test-index',
   VECTOR_SIZE: '1536',
@@ -22,9 +22,9 @@ type MockIndexListResponse = {
 };
 
 const createMockClient = (): MockPineconeClient => ({
-  listIndexes: jest.fn<() => Promise<MockIndexListResponse>>(),
-  deleteIndex: jest.fn<(name: string) => Promise<void>>(),
-  createIndex: jest.fn<(options: unknown) => Promise<void>>(),
+  listIndexes: jest.fn() as unknown as jest.MockedFunction<() => Promise<MockIndexListResponse>>,
+  deleteIndex: jest.fn() as unknown as jest.MockedFunction<(name: string) => Promise<void>>,
+  createIndex: jest.fn() as unknown as jest.MockedFunction<(options: unknown) => Promise<void>>,
 });
 
 describe('PineconeManager index management', () => {
@@ -73,6 +73,34 @@ describe('PineconeManager index management', () => {
       expect(mockClient.createIndex).not.toHaveBeenCalled();
     });
 
+    it('does not create index when the requested named index exists', async () => {
+      mockClient.listIndexes.mockResolvedValue({
+        indexes: [{ name: 'exists' }],
+      });
+
+      await PineconeManager.ensureIndexExists('exists');
+
+      expect(mockClient.createIndex).not.toHaveBeenCalled();
+    });
+
+    it('creates the requested named index when absent', async () => {
+      mockClient.listIndexes.mockResolvedValue({ indexes: [] });
+      jest.useFakeTimers();
+
+      const ensurePromise = PineconeManager.ensureIndexExists('absent');
+      await jest.runAllTimersAsync();
+      await ensurePromise;
+
+      expect(mockClient.createIndex).toHaveBeenCalledWith(expect.objectContaining({ name: 'absent' }));
+    });
+
+    it('throws when index creation fails', async () => {
+      mockClient.listIndexes.mockResolvedValue({ indexes: [] });
+      mockClient.createIndex.mockRejectedValue(new Error('create-fail'));
+
+      await expect(PineconeManager.ensureIndexExists('test-index')).rejects.toThrow('create-fail');
+    });
+
     it('handles errors', async () => {
       mockClient.listIndexes.mockRejectedValue(new Error('API Error'));
 
@@ -105,6 +133,25 @@ describe('PineconeManager index management', () => {
 
       expect(mockClient.deleteIndex).not.toHaveBeenCalled();
       expect(mockClient.createIndex).toHaveBeenCalledWith(expect.objectContaining({ name: 'test-index' }));
+    });
+
+    it('creates the requested named index when it does not exist', async () => {
+      mockClient.listIndexes.mockResolvedValue({ indexes: [] });
+      jest.useFakeTimers();
+
+      const recreatePromise = PineconeManager.recreateIndex('new-index');
+      await jest.runAllTimersAsync();
+      await recreatePromise;
+
+      expect(mockClient.deleteIndex).not.toHaveBeenCalled();
+      expect(mockClient.createIndex).toHaveBeenCalledWith(expect.objectContaining({ name: 'new-index' }));
+    });
+
+    it('throws when deleting an existing index fails', async () => {
+      mockClient.listIndexes.mockResolvedValue({ indexes: [{ name: 'test-index' }] });
+      mockClient.deleteIndex.mockRejectedValue(new Error('delete-fail'));
+
+      await expect(PineconeManager.recreateIndex('test-index')).rejects.toThrow('delete-fail');
     });
   });
 });

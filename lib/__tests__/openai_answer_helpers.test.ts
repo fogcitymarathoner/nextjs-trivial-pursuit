@@ -31,7 +31,7 @@ jest.mock('@/lib/OpenAIClientManager', () => ({
   },
 }));
 
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   DEBUG: 'false',
   CHAT_MODEL: 'gpt-3.5-turbo',
   DEFAULT_THRESHOLD: '0.4',
@@ -43,7 +43,7 @@ jest.mock('@/config/env', () => ({
 }));
 
 // Now import everything after mocks
-import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 import OpenAIClientManager from '../OpenAIClientManager';
 import PineconeManager from '../PineconeManager';
 import {
@@ -70,10 +70,15 @@ const mockGetEmbedding = OpenAIClientManager.getEmbedding as unknown as jest.Moc
 const mockGetClient = OpenAIClientManager.getClient as unknown as jest.MockedFunction<() => { chat: { completions: { create: jest.MockedFunction<ChatCreateFn> } } }>;
 const mockGetIndex = PineconeManager.getIndex as unknown as jest.MockedFunction<() => typeof mockPineconeIndex>;
 const mockQuery = mockPineconeIndex.query as jest.MockedFunction<(...args: unknown[]) => Promise<QueryResult>>;
+const originalEnv = process.env;
 
 describe('openai_answer_helpers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env = {
+      ...originalEnv,
+      PINECONE_INDEX_DEV: 'test-index',
+    };
     mockGetIndex.mockReturnValue(mockPineconeIndex);
     mockGetEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
     const createMock = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
@@ -85,6 +90,7 @@ describe('openai_answer_helpers', () => {
   });
 
   afterEach(() => {
+    process.env = originalEnv;
     jest.clearAllMocks();
   });
 
@@ -184,6 +190,22 @@ describe('openai_answer_helpers', () => {
     it('should return null for no valid answers', () => {
       expect(mergeAnswers([null, undefined])).toBeNull();
     });
+    it('should use strategy override', () => {
+      const strategy = jest.fn().mockReturnValue({ text: 'STRAT', metadata: {} });
+
+      const result = mergeAnswers(['a', 'b'], { strategy });
+
+      expect(strategy).toHaveBeenCalledWith('a', 'b');
+      expect(result?.text).toBe('STRAT');
+    });
+    it('should compute average confidence', () => {
+      const result = mergeAnswers([
+        { text: 'A', confidence: 0.8 },
+        { text: 'B', confidence: 0.6 }
+      ]);
+
+      expect(result?.metadata.average_confidence).toBe(0.7);
+    });
   });
 
   describe('queryPinecone', () => {
@@ -211,6 +233,93 @@ describe('openai_answer_helpers', () => {
       mockQuery.mockResolvedValue(null);
       const result = await getAnswer('test', 0.5, false);
       expect(result).toContain('I cannot answer this question');
+    });
+
+    it('should log debug details when no context is found and fallback is disabled', async () => {
+      const originalDebug = process.env.DEBUG;
+      process.env.DEBUG = 'true';
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+      mockQuery.mockResolvedValue(null);
+
+      const result = await getAnswer('Q?', 0.5, false);
+
+      expect(result).toContain('I cannot answer this question');
+      expect(consoleSpy).toHaveBeenCalledWith('=== Debug Info ===');
+      expect(consoleSpy).toHaveBeenCalledWith('Context found: false');
+
+      consoleSpy.mockRestore();
+      process.env.DEBUG = originalDebug;
+    });
+
+    it('should return LLM answer when context is present', async () => {
+      const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+      mockChatCreate.mockResolvedValue({
+        choices: [{ message: { content: 'LLM ANSWER' } }]
+      });
+      mockGetClient.mockReturnValue({
+        chat: { completions: { create: mockChatCreate } }
+      });
+      mockQuery.mockResolvedValue({
+        matches: [
+          { id: '1', score: 0.9, metadata: { text: 'some context', page: 1, source: 'src' } }
+        ]
+      });
+
+      const result = await getAnswer('Q?', 0.5, true);
+
+      expect(result).toBe('LLM ANSWER');
+      expect(mockGetEmbedding).toHaveBeenCalledWith('Q?');
+      expect(mockChatCreate).toHaveBeenCalled();
+    });
+
+    it('should use label lookup when a Pinecone index label is provided', async () => {
+      const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+      mockChatCreate.mockResolvedValue({
+        choices: [{ message: { content: 'LLM ANSWER' } }]
+      });
+      mockGetClient.mockReturnValue({
+        chat: { completions: { create: mockChatCreate } }
+      });
+      mockQuery.mockResolvedValue({
+        matches: [
+          { id: '1', score: 0.9, metadata: { text: 'some context', page: 1, source: 'src' } }
+        ]
+      });
+
+      const result = await getAnswer('Q?', 0.5, true, 'Presidents');
+
+      expect(result).toBe('LLM ANSWER');
+      expect(mockGetIndex).toHaveBeenCalledWith('test-index');
+    });
+
+    it('should fall back to general knowledge when no context is found', async () => {
+      const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+      mockChatCreate.mockResolvedValue({
+        choices: [{ message: { content: 'LLM ANSWER' } }]
+      });
+      mockGetClient.mockReturnValue({
+        chat: { completions: { create: mockChatCreate } }
+      });
+      mockQuery.mockResolvedValue(null);
+
+      const result = await getAnswer('Q?', 0.5, true);
+
+      expect(result).toBe('LLM ANSWER');
+      expect(mockChatCreate).toHaveBeenCalled();
+      expect(mockChatCreate.mock.calls[0][0].messages[1].content).toContain("couldn't find any relevant context");
+    });
+
+    it('should handle empty completion choices', async () => {
+      const mockChatCreate = jest.fn() as unknown as jest.MockedFunction<ChatCreateFn>;
+      mockChatCreate.mockResolvedValue({ choices: [] });
+      mockGetClient.mockReturnValue({
+        chat: { completions: { create: mockChatCreate } }
+      });
+      mockQuery.mockResolvedValue(null);
+
+      const result = await getAnswer('question-empty', 0.5, true);
+
+      expect(result).toContain("couldn't generate");
     });
   });
 
@@ -417,5 +526,240 @@ describe('openai_answer_helpers', () => {
         process.env.DEBUG = originalDebug;
       });
     });
+  });
+});
+
+type CoverageChatCreateReturn = { choices: Array<{ message?: { content?: string } }> };
+type CoverageChatCreateFn = (args: ChatCreateArgs) => Promise<CoverageChatCreateReturn>;
+type CoverageQueryResult = { matches?: Array<{ id: string; score?: number; metadata?: Record<string, unknown> }> } | null;
+
+describe('openai_answer_helpers coverage branches', () => {
+  beforeEach(() => {
+    jest.resetModules();
+    jest.clearAllMocks();
+    process.env = {
+      ...originalEnv,
+      PINECONE_INDEX_DEV: 'test-index',
+    };
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+    jest.restoreAllMocks();
+  });
+
+  const mockDependencies = (options?: {
+    debug?: string;
+    queryResult?: CoverageQueryResult;
+    pineconeIndexDev?: string;
+  }) => {
+    const isolatedGetEmbedding = jest.fn() as unknown as jest.MockedFunction<() => Promise<number[]>>;
+    isolatedGetEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+    const isolatedQuery = jest.fn() as unknown as jest.MockedFunction<() => Promise<CoverageQueryResult>>;
+    isolatedQuery.mockResolvedValue(options?.queryResult ?? { matches: [] });
+    const isolatedChatCreate = jest.fn() as unknown as jest.MockedFunction<CoverageChatCreateFn>;
+    isolatedChatCreate.mockResolvedValue({ choices: [{ message: { content: 'LLM answer' } }] });
+
+    jest.doMock('@/lib/OpenAIClientManager', () => ({
+      __esModule: true,
+      default: {
+        getEmbedding: isolatedGetEmbedding,
+        getClient: () => ({
+          chat: { completions: { create: isolatedChatCreate } },
+        }),
+      },
+    }));
+
+    jest.doMock('@/lib/PineconeManager', () => ({
+      __esModule: true,
+      default: {
+        getIndex: () => ({ query: isolatedQuery }),
+      },
+    }));
+
+    jest.doMock('@/config/env.server', () => ({
+      DEBUG: options?.debug ?? 'false',
+      CHAT_MODEL: 'gpt-4o-mini',
+      DEFAULT_THRESHOLD: '0.5',
+      PINECONE_INDEX_DEV: options?.pineconeIndexDev ?? 'test-index',
+    }));
+
+    jest.doMock('@/config/pinecone/pinecone_indexes', () => ({
+      PINECONE_INDEXES: [
+        { label: 'Presidents', indexName: 'test-index', description: 'Historical president documents' },
+      ],
+      getIndexNameByLabel: (label: string) => (label === 'Presidents' ? 'test-index' : undefined),
+    }));
+
+    return { isolatedGetEmbedding, isolatedQuery, isolatedChatCreate };
+  };
+
+  it('falls back to static DEBUG when process.env.DEBUG throws', async () => {
+    mockDependencies({
+      debug: 'true',
+      queryResult: {
+        matches: [
+          { id: '1', score: 0.9, metadata: { text: 'context', source: 'src' } },
+        ],
+      },
+    });
+
+    const { getAnswer: isolatedGetAnswer } = await import('../openai_answer_helpers');
+    const debugDescriptor = Object.getOwnPropertyDescriptor(process.env, 'DEBUG');
+    Object.defineProperty(process.env, 'DEBUG', {
+      configurable: true,
+      get: () => {
+        throw new Error('DEBUG unavailable');
+      },
+    });
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(isolatedGetAnswer('question', 0.5, true, 'Presidents')).resolves.toBe('LLM answer');
+
+    expect(logSpy).toHaveBeenCalledWith('Generated answer:', 'LLM answer');
+
+    if (debugDescriptor) {
+      Object.defineProperty(process.env, 'DEBUG', debugDescriptor);
+    } else {
+      Reflect.deleteProperty(process.env, 'DEBUG');
+    }
+  });
+
+  it('logs import introspection failures during module evaluation', async () => {
+    const brokenManager = {};
+    Object.defineProperty(brokenManager, 'getEmbedding', {
+      get: () => {
+        throw new Error('mock import failure');
+      },
+    });
+
+    jest.doMock('@/lib/OpenAIClientManager', () => ({
+      __esModule: true,
+      default: brokenManager,
+    }));
+    jest.doMock('@/lib/PineconeManager', () => ({
+      __esModule: true,
+      default: { getIndex: jest.fn() },
+    }));
+    jest.doMock('@/config/env.server', () => ({
+      DEBUG: 'false',
+      CHAT_MODEL: 'gpt-4o-mini',
+      DEFAULT_THRESHOLD: '0.5',
+    }));
+    jest.doMock('@/config/pinecone/pinecone_indexes', () => ({
+      PINECONE_INDEXES: [],
+      getIndexNameByLabel: jest.fn(),
+    }));
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await import('../openai_answer_helpers');
+
+    expect(errorSpy).toHaveBeenCalledWith('OA: init - import introspect failed', expect.any(Error));
+  });
+
+  it('throws when queryPinecone has no explicit or env index', async () => {
+    process.env = { ...originalEnv };
+    Reflect.deleteProperty(process.env, 'PINECONE_INDEX_DEV');
+    const { isolatedGetEmbedding } = mockDependencies({ pineconeIndexDev: '' });
+    const { queryPinecone: isolatedQueryPinecone } = await import('../openai_answer_helpers');
+
+    await expect(isolatedQueryPinecone('question', 0.5)).rejects.toThrow('No Pinecone index specified');
+    expect(isolatedGetEmbedding).not.toHaveBeenCalled();
+  });
+
+  it('covers the defensive no-matches branch after a changing matches getter', async () => {
+    let readCount = 0;
+    const changingResult = {};
+    Object.defineProperty(changingResult, 'matches', {
+      get: () => {
+        readCount += 1;
+        return readCount <= 2 ? [{ id: '1', score: 0.9, metadata: { text: 'context' } }] : undefined;
+      },
+    });
+
+    mockDependencies({ queryResult: changingResult as CoverageQueryResult });
+    const { queryPinecone: isolatedQueryPinecone } = await import('../openai_answer_helpers');
+
+    await expect(isolatedQueryPinecone('question', 0.5, 'test-index')).resolves.toBeNull();
+  });
+
+  it('throws for an unknown Pinecone index label', async () => {
+    mockDependencies();
+    const { getAnswer: isolatedGetAnswer } = await import('../openai_answer_helpers');
+
+    await expect(isolatedGetAnswer('question', 0.5, true, 'Unknown')).rejects.toThrow(
+      'No Pinecone index found with name: Unknown. Available indexes: Presidents'
+    );
+  });
+
+  it('throws when getAnswer has no label and no env index', async () => {
+    process.env = { ...originalEnv };
+    Reflect.deleteProperty(process.env, 'PINECONE_INDEX_DEV');
+    mockDependencies({ pineconeIndexDev: '' });
+    const { getAnswer: isolatedGetAnswer } = await import('../openai_answer_helpers');
+
+    await expect(isolatedGetAnswer('question')).rejects.toThrow(
+      'No Pinecone index specified. Either pass pineconeIndexName or set PINECONE_INDEX_DEV in environment'
+    );
+  });
+
+  it('covers empty display text and mixed-answer separators', async () => {
+    mockDependencies();
+    const {
+      formatAnswerForDisplay: isolatedFormatAnswerForDisplay,
+      mergeAnswers: isolatedMergeAnswers,
+    } = await import('../openai_answer_helpers');
+
+    expect(isolatedFormatAnswerForDisplay({ content: {} })).toBe('');
+    expect(isolatedMergeAnswers([{ text: 'A' }, { text: 'B' }])?.text).toBe('A\n---\nB');
+    expect(isolatedMergeAnswers([{ text: 'A' }, { text: 'B' }], { separator: ' / ' })?.text).toBe('A / B');
+  });
+
+  it('covers score fallback and non-string debug metadata in queryPinecone', async () => {
+    mockDependencies({
+      debug: 'true',
+      queryResult: {
+        matches: [
+          { id: 'missing-score', metadata: { text: 'below threshold' } },
+          { id: 'numeric-text', score: 0.9, metadata: { text: 123 } },
+        ],
+      },
+    });
+    const { queryPinecone: isolatedQueryPinecone } = await import('../openai_answer_helpers');
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    const result = await isolatedQueryPinecone('question', 0.5, 'test-index');
+
+    expect(result?.matches).toHaveLength(1);
+    expect(result?.matches?.[0].id).toBe('numeric-text');
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Text (truncated): 123...'));
+  });
+
+  it('returns null when every match is filtered out by score fallback', async () => {
+    mockDependencies({
+      queryResult: {
+        matches: [
+          { id: 'missing-score', metadata: { text: 'below threshold' } },
+        ],
+      },
+    });
+    const { queryPinecone: isolatedQueryPinecone } = await import('../openai_answer_helpers');
+
+    await expect(isolatedQueryPinecone('question', 0.5, 'test-index')).resolves.toBeNull();
+  });
+
+  it('uses Unknown when context source metadata is missing', async () => {
+    const { isolatedChatCreate } = mockDependencies({
+      queryResult: {
+        matches: [
+          { id: '1', score: 0.9, metadata: { text: 'context without source' } },
+        ],
+      },
+    });
+    const { getAnswer: isolatedGetAnswer } = await import('../openai_answer_helpers');
+
+    await isolatedGetAnswer('question', 0.5, true, 'Presidents');
+
+    expect(isolatedChatCreate.mock.calls[0][0].messages[1].content).toContain('Source: Unknown');
   });
 });

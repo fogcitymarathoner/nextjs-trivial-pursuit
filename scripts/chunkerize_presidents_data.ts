@@ -1,7 +1,7 @@
 // assumes data/presidents_clean_urls.json exists
 
 // To run - npx tsx scripts/chunkerize_presidents_data.ts
-import { DEBUG, PINECONE_API_KEY, PINECONE_INDEX_DEV } from "@/config/env";
+import { DEBUG, PINECONE_API_KEY, PINECONE_INDEX_DEV } from "@/config/env.server";
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { removeHtmlTagsCheerio } from '@/lib/html_tag_helpers';
 import { Pinecone } from '@pinecone-database/pinecone';

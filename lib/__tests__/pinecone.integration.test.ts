@@ -4,10 +4,10 @@
 
 // Add this at the very top - before any other imports
 import 'cross-fetch/polyfill';
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
+import '@testing-library/jest-dom';
 
 // Mock config
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   PINECONE_API_KEY: 'test-key',
   PINECONE_INDEX_DEV: 'test-index',
 }));

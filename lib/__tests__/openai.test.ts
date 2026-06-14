@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 import type OpenAI from 'openai';
 import OpenAIClientManager from '../OpenAIClientManager';
 
@@ -13,7 +13,7 @@ type ChatCompletionResponse = {
 };
 
 // Mock environment variables
-jest.mock('@/config/env', () => ({
+jest.mock('@/config/env.server', () => ({
   EMBEDDING_MODEL: 'text-embedding-3-small',
   CHAT_MODEL: 'gpt-3.5-turbo',
 }));

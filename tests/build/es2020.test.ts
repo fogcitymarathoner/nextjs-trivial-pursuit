@@ -1,5 +1,5 @@
 // tests/build/es2020.test.ts
-import { describe, it, expect } from '@jest/globals';
+import '@testing-library/jest-dom';
 
 describe('Next.js build output contains ES2020 syntax', () => {
   it('should detect ES2020 features in build output', () => {

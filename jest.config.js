@@ -1,7 +1,10 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'jsdom',
-    testMatch: ['**/*.test.ts', '**/*.test.tsx', '**/*.test.js'],
+    testMatch: [
+        '**/*.test.ts',
+        '**/*.test.tsx',
+        '**/*.test.js'],
     transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
             tsconfig: 'tsconfig.json',
@@ -31,19 +34,20 @@ module.exports = {
     watchPathIgnorePatterns: [
         '<rootDir>/.next/'
     ],
-    roots: ['<rootDir>'],
     cacheDirectory: '<rootDir>/.jest-cache',
     testTimeout: 10000,
-    
+
     // Enable coverage collection
     collectCoverage: true,
-    
+
     // Exclude ALL test files from coverage reports
     collectCoverageFrom: [
         "app/**/*.{ts,tsx}",
         "lib/**/*.{ts,tsx}",
+        "components/**/*.{ts,tsx}",
         "!app/**/__tests__/**",
         "!lib/**/__tests__/**",
+        "!components/**/__tests__/**",
         "!**/*.test.ts",
         "!**/*.test.tsx",
         "!**/*.test.js",
@@ -53,11 +57,11 @@ module.exports = {
         "!**/node_modules/**",
         "!**/tmp/**",
     ],
-    
+
     coverageReporters: ["text", "text-summary", "lcov", "html"],
     coverageDirectory: "<rootDir>/coverage",
     coverageProvider: "v8",
-    
+
     coverageThreshold: {
         global: {
             branches: 90,

@@ -11,6 +11,12 @@ on:
 
 env:
   NODE_ENV: test
+  CHAT_MODEL: gpt-4o-mini
+  EMBEDDING_MODEL: text-embedding-3-large
+  VECTOR_SIZE: 3072
+  DEFAULT_THRESHOLD: 0.4
+  PINECONE_INDEX_DEV: presidents-dev
+  DEBUG: true
 
 jobs:
   test:

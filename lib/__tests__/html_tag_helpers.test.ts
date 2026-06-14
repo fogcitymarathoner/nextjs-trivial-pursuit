@@ -1,5 +1,5 @@
 // lib/__tests__/html_tag_helpers.test.ts
-import { describe, expect, it, beforeEach, jest } from '@jest/globals';
+import '@testing-library/jest-dom';
 
 // Mock cheerio BEFORE importing the module being tested
 jest.mock('cheerio', () => ({

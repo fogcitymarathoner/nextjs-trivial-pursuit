@@ -12,7 +12,8 @@ import PineconeManager from "@/lib/PineconeManager";
 import {
   DEBUG,
   CHAT_MODEL,
-  DEFAULT_THRESHOLD} from "@/config/env";
+  DEFAULT_THRESHOLD} from "@/config/env.server";
+import {PINECONE_INDEXES, getIndexNameByLabel} from "@/config/pinecone/pinecone_indexes";
 
 // runtime debug check (allow overriding via process.env.DEBUG in tests)
 function isDebug(): boolean {
@@ -177,15 +178,27 @@ export function mergeAnswers(
 // Diagnostic: mark before defining exported functions
 // eslint-disable-next-line no-console
 console.log('OA: defining queryPinecone');
-
 export const queryPinecone = async (
   question: string,
-  similarityThreshold: number = Number(DEFAULT_THRESHOLD)  // Add parameter with default 0.4
+  similarityThreshold: number = Number(DEFAULT_THRESHOLD),
+  indexName?: string  // Add this parameter
 ): Promise<QueryResponse<RecordMetadata> | null> => {
   // eslint-disable-next-line no-console
   console.log('OA: entered queryPinecone');
+
+  // Use provided index name or fall back to env var
+  const indexToUse = indexName || process.env.PINECONE_INDEX_DEV;
+
+  if (!indexToUse) {
+    throw new Error('No Pinecone index specified. Either pass indexName or set PINECONE_INDEX_DEV in environment');
+  }
+
+  console.log(`OA: Using Pinecone index: ${indexToUse}`);
+
   const query_embedding = await OpenAIClientManager.getEmbedding(question);
-  const result = await PineconeManager.getIndex().query({
+
+  // Get the specific index instead of default
+  const result = await PineconeManager.getIndex(indexToUse).query({
     vector: query_embedding,
     topK: 3,
     includeValues: false,
@@ -193,7 +206,7 @@ export const queryPinecone = async (
   });
 
   if (!result || !result.matches || result.matches.length === 0) {
-    console.log(`No matches found for '${question}'`);
+    console.log(`No matches found for '${question}' in index '${indexToUse}'`);
     return null;
   }
 
@@ -204,7 +217,7 @@ export const queryPinecone = async (
     );
 
     if (isDebug()) {
-      console.log(`Top matches for '${question}' (threshold: ${similarityThreshold}):`);
+      console.log(`Top matches for '${question}' (index: ${indexToUse}, threshold: ${similarityThreshold}):`);
       console.log(`Original matches: ${result.matches.length}, Filtered: ${filteredMatches.length}`);
 
       for (const match of filteredMatches) {
@@ -224,30 +237,57 @@ export const queryPinecone = async (
     // Return null if no matches meet threshold
     return filteredMatches.length > 0 ? { ...result, matches: filteredMatches } : null;
   } else {
-    console.log(`No matches found for '${question}'`);
+    console.log(`No matches found for '${question}' in index '${indexToUse}'`);
     return null;
   }
 };
-
 
 /**
  * Generates an answer to a question using context from Pinecone and OpenAI chat completion.
  * @param question The question to answer
  * @param similarityThreshold Minimum similarity score (0-1) for context matches. Defaults to 0.5.
  * @param fallbackToGeneralKnowledge Whether to use LLM's general knowledge when no context found. Defaults to true.
+ * @param pineconeIndexName Optional human-readable name of the Pinecone index to query. Defaults to PINECONE_INDEX_DEV env var.
  * @returns Promise<string> The generated answer
  */
 export async function getAnswer(
   question: string,
   similarityThreshold: number = 0.5,
-  fallbackToGeneralKnowledge: boolean = true
+  fallbackToGeneralKnowledge: boolean = true,
+  pineconeIndexLabel?: string  // Human-readable name from UI
 ): Promise<string> {
   // eslint-disable-next-line no-console
   console.log('OA: entered getAnswer');
-  // Query Pinecone for relevant context with threshold
+
+  // Determine which Pinecone index to use
+  let indexToUse: string | undefined;
+
+  if (pineconeIndexLabel) {
+    // Lookup by index name from the configuration
+    const pineconeIndexName = getIndexNameByLabel(pineconeIndexLabel);
+    // For validating labels
+    const VALID_LABELS = PINECONE_INDEXES.map(idx => idx.label);
+
+    // Then in your validation:
+    if (!VALID_LABELS.includes(pineconeIndexLabel)) {
+      throw new Error(`No Pinecone index found with name: ${pineconeIndexLabel}. Available indexes: ${VALID_LABELS.join(', ')}`);
+    }
+    indexToUse = pineconeIndexName; // This is the actual Pinecone index name
+    console.log(`OA: Using index "${pineconeIndexLabel}" -> Pinecone index: ${indexToUse}`);
+  } else {
+    // Fall back to env var
+    indexToUse = process.env.PINECONE_INDEX_DEV;
+    if (!indexToUse) {
+      throw new Error('No Pinecone index specified. Either pass pineconeIndexName or set PINECONE_INDEX_DEV in environment');
+    }
+    console.log(`OA: Using default Pinecone index from env: ${indexToUse}`);
+  }
+
+  // Query Pinecone for relevant context with threshold and specified index
   const queryResult = await queryPinecone(
     question,
-    similarityThreshold
+    similarityThreshold,
+    indexToUse  // Pass the actual Pinecone index name to queryPinecone
   );
 
   // Build context from query results
@@ -285,6 +325,8 @@ export async function getAnswer(
       console.log(`Question: ${question}`);
       console.log(`Similarity Threshold: ${similarityThreshold}`);
       console.log(`Fallback to General Knowledge: ${fallbackToGeneralKnowledge}`);
+      console.log(`Human-readable Index Name: ${pineconeIndexLabel || 'default'}`);
+      console.log(`Actual Pinecone Index: ${indexToUse}`);
       console.log(`Context found: false`);
       console.log("==================");
     }
@@ -309,6 +351,8 @@ export async function getAnswer(
     console.log(`Question: ${question}`);
     console.log(`Similarity Threshold: ${similarityThreshold}`);
     console.log(`Fallback to General Knowledge: ${fallbackToGeneralKnowledge}`);
+    console.log(`Human-readable Index Name: ${pineconeIndexLabel || 'default'}`);
+    console.log(`Actual Pinecone Index: ${indexToUse}`);
     console.log(`Context found: ${hasContext}`);
     if (hasContext) {
       console.log(`Context length: ${context.length}`);
