@@ -1,0 +1,14 @@
+node_modules
+.next
+.git
+.github
+.env.local
+.env.development
+.env.production
+README.md
+.gitignore
+.DS_Store
+*.log
+coverage
+.vercel
+.nyc_output

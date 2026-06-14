@@ -18,9 +18,12 @@ env:
   DEFAULT_THRESHOLD: 0.4
   PINECONE_INDEX_DEV: presidents-dev
   DEBUG: true
+  DOCKER_BUILDKIT: 1
+  COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
-  test:
+  # RECOMMENDATION: Combined build and test job to avoid duplication
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -29,7 +32,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '26'
+          node-version: '20'
           cache: 'yarn'
 
       - name: Install dependencies
@@ -45,8 +48,38 @@ jobs:
           CLIENT_SECRET_FILE: xxxxxxx
           CLIENT_SECRET_FILE_FOGCITYMARATHONER_LIST_FILES_2: XXXXXXX
 
+      # RECOMMENDATION: Build the app once here, not in deploy job
+      - name: Build Next.js app
+        run: yarn build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+      # RECOMMENDATION: Save build artifacts to reuse in deploy job
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-build
+          path: |
+            .next
+            node_modules
+            public
+            package.json
+            yarn.lock
+          retention-days: 1
+
+      # RECOMMENDATION: Also save test results for reporting
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            coverage
+            test-results
+          retention-days: 7
+        if: always()
+
   deploy:
-    needs: test  # Deploy only if tests pass
+    needs: build-and-test  # RECOMMENDATION: Only deploy if build and tests pass
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -56,22 +89,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      # RECOMMENDATION: Download pre-built artifacts instead of rebuilding
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
         with:
-          node-version: '26'
-          cache: 'yarn'
+          name: nextjs-build
+          path: .
 
-      - name: Install yarn
-        run: npm install -g yarn
+      - name: Set up Docker BuildKit
+        run: |
+          echo "DOCKER_BUILDKIT=1" >> $GITHUB_ENV
+          echo "COMPOSE_DOCKER_CLI_BUILD=1" >> $GITHUB_ENV
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: Build Next.js app
-        run: yarn build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+      - name: Verify BuildKit
+        run: |
+          docker version
+          docker buildx version
+          echo "DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
 
       - name: Google Cloud Auth
         uses: google-github-actions/auth@v2
@@ -86,13 +120,22 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
-      - name: Build Docker image
+      # RECOMMENDATION: Use BuildKit with registry cache for faster builds
+      - name: Build Docker image with BuildKit and Registry Cache
         run: |
-          docker build -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest .
+          docker build \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            --cache-from ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest \
+            --cache-from ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest \
+            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache \
+            --progress=plain \
+            .
 
-      - name: Push Docker image
+      - name: Push Docker image with cache tag
         run: |
           docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest
+          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache
 
       - name: Deploy to Cloud Run
         run: |
@@ -104,3 +147,28 @@ jobs:
             --memory 512Mi \
             --cpu 1 \
             --set-env-vars "^@@^PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }},OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},CHAT_MODEL=gpt-4o-mini,EMBEDDING_MODEL=text-embedding-3-large,VECTOR_SIZE=3072,DEFAULT_THRESHOLD=0.4,PINECONE_INDEX_DEV=presidents-dev,DEBUG=true"
+
+  # RECOMMENDATION: Optional - Add a job to verify deployment
+  verify-deployment:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always() && needs.deploy.result == 'success'
+    steps:
+      - name: Verify deployment
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 30
+          curl -f https://${{ env.SERVICE_NAME }}-${{ secrets.GCP_PROJECT_ID }}.uc.r.appspot.com/api/health || exit 1
+          echo "✅ Deployment verified successfully!"
+
+  # RECOMMENDATION: Optional - Add notification on failure
+  notify-failure:
+    needs: [build-and-test, deploy]
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/master'
+    steps:
+      - name: Send failure notification
+        run: |
+          echo "❌ Deployment failed for commit ${{ github.sha }}"
+          echo "Check workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # Add your notification logic here (Slack, email, etc.)
