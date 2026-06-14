@@ -12,12 +12,17 @@ jest.mock('@/config/env', () => ({
   PINECONE_INDEX_DEV: 'test-index',
 }));
 
-// Create mocks - simplified without type assertions
-const mockUpsert = jest.fn().mockResolvedValue(undefined);
-const mockQuery = jest.fn().mockResolvedValue({ matches: [] });
-const mockDeleteMany = jest.fn().mockResolvedValue(undefined);
-const mockFetch = jest.fn().mockResolvedValue({ records: {} });
-const mockDescribeStats = jest.fn().mockResolvedValue({ totalRecordCount: 0 });
+// Create typed mocks to satisfy TypeScript
+const mockUpsert = jest.fn() as unknown as jest.MockedFunction<(vectors: any) => Promise<void>>;
+mockUpsert.mockResolvedValue(undefined as unknown as void);
+const mockQuery = jest.fn() as unknown as jest.MockedFunction<(opts: any) => Promise<{ matches: any[] }>>;
+mockQuery.mockResolvedValue({ matches: [] });
+const mockDeleteMany = jest.fn() as unknown as jest.MockedFunction<(opts: any) => Promise<void>>;
+mockDeleteMany.mockResolvedValue(undefined as unknown as void);
+const mockFetch = jest.fn() as unknown as jest.MockedFunction<(opts: any) => Promise<{ records: any }>>;
+mockFetch.mockResolvedValue({ records: {} });
+const mockDescribeStats = jest.fn() as unknown as jest.MockedFunction<() => Promise<{ totalRecordCount: number }>>;
+mockDescribeStats.mockResolvedValue({ totalRecordCount: 0 });
 
 const mockIndexInstance = {
   upsert: mockUpsert,
@@ -39,33 +44,34 @@ jest.mock('@pinecone-database/pinecone', () => ({
 }));
 
 // Import after mocks
-import { getPineconeIndex } from '../pinecone';
+import PineconeManager from '../PineconeManager';
 
-describe('Pinecone Helper', () => {
+describe('PineconeManager index access', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    PineconeManager.setIndex(null);
   });
 
   it('should return an index', () => {
-    const index = getPineconeIndex();
+    const index = PineconeManager.getIndex();
     expect(index).toBeDefined();
   });
 
   it('should return the same index on multiple calls', () => {
-    const index1 = getPineconeIndex();
-    const index2 = getPineconeIndex();
+    const index1 = PineconeManager.getIndex();
+    const index2 = PineconeManager.getIndex();
     expect(index1).toBe(index2);
   });
 
   it('should allow upsert', async () => {
-    const index = getPineconeIndex();
+    const index = PineconeManager.getIndex();
     const vectors = { records: [{ id: '1', values: [0.1, 0.2] }] };
     await index.upsert(vectors);
     expect(mockUpsert).toHaveBeenCalledWith(vectors);
   });
 
   it('should allow query', async () => {
-    const index = getPineconeIndex();
+    const index = PineconeManager.getIndex();
     const queryOptions = { vector: [0.1, 0.2], topK: 5 };
     await index.query(queryOptions);
     expect(mockQuery).toHaveBeenCalledWith(queryOptions);

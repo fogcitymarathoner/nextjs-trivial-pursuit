@@ -2,7 +2,7 @@ import {DEBUG} from "@/config/env";
 import {queryPinecone} from "@/lib/openai_answer_helpers";
 
 import { Pinecone } from "@pinecone-database/pinecone";
-import {warmupChatCompletion} from "@/lib/openai";
+import OpenAIClientManager from "@/lib/OpenAIClientManager";
 
 if (!DEBUG) throw new Error("DEBUG is not set");
 
@@ -19,11 +19,11 @@ const index = pc.index(process.env.PINECONE_API_KEY!);
   // ; is necessary
 ;(async () => {
   if (process.env.DEBUG === 'true') {
-    const result = await warmupChatCompletion()
+    const result = await OpenAIClientManager.warmupChatCompletion()
     console.log(result)
   }
   else {
-    await warmupChatCompletion()
+    await OpenAIClientManager.warmupChatCompletion()
   }
 
 })()

@@ -6,22 +6,49 @@
  * @returns Query result or null if no matches
  */
 import type {QueryResponse, RecordMetadata} from "@pinecone-database/pinecone";
-import {getOpenAIEmbedding, getOpenAIClient} from "@/lib/openai";
+import OpenAIClientManager from "@/lib/OpenAIClientManager";
 
-import {getPineconeIndex} from "@/lib/pinecone";
+import PineconeManager from "@/lib/PineconeManager";
 import {
   DEBUG,
   CHAT_MODEL,
   DEFAULT_THRESHOLD} from "@/config/env";
+
+// runtime debug check (allow overriding via process.env.DEBUG in tests)
+function isDebug(): boolean {
+  try {
+    return process.env.DEBUG === 'true' || DEBUG === 'true';
+  } catch (err) {
+    return DEBUG === 'true';
+  }
+}
+
+// Define types for answer objects
+type AnswerObject = {
+  text?: string;
+  content?: {
+    text?: string;
+  };
+  confidence?: number;
+  model?: string;
+  tokens?: number;
+  temperature?: number;
+  max_tokens?: number;
+  metadata?: Record<string, unknown>;
+  [key: string]: unknown;
+};
+
+type ParsedAnswer = AnswerObject | null;
+type MetadataOutput = Record<string, unknown>;
 
 // Diagnostic guards to help tests debug module load / mock ordering issues
 try {
   // Log imported symbols' types so we can see if imports were mocked/undefined
   // eslint-disable-next-line no-console
   console.log('OA: init - imported types', {
-    getOpenAIEmbedding: typeof getOpenAIEmbedding,
-    getOpenAIClient: typeof getOpenAIClient,
-    getPineconeIndex: typeof getPineconeIndex,
+    getOpenAIEmbedding: typeof OpenAIClientManager.getEmbedding,
+    getOpenAIClient: typeof OpenAIClientManager.getClient,
+    pineconeManagerGetIndex: typeof PineconeManager.getIndex,
     DEBUG: typeof DEBUG
   });
 } catch (err) {
@@ -30,10 +57,10 @@ try {
 }
 
 // ----- Helper utilities (restored) -----
-export function parseAnswer(answer: string | null | undefined): any | null {
+export function parseAnswer(answer: string | null | undefined): ParsedAnswer {
   if (!answer || typeof answer !== 'string') return null;
   try {
-    return JSON.parse(answer);
+    return JSON.parse(answer) as AnswerObject;
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('Failed to parse answer:', err);
@@ -41,7 +68,7 @@ export function parseAnswer(answer: string | null | undefined): any | null {
   }
 }
 
-export function extractTextFromAnswer(answer: any): string {
+export function extractTextFromAnswer(answer: AnswerObject | string | null | undefined): string {
   if (!answer) return '';
   if (typeof answer === 'string') return answer;
   if (typeof answer.text === 'string' && answer.text.trim() !== '') return answer.text;
@@ -49,12 +76,12 @@ export function extractTextFromAnswer(answer: any): string {
   return '';
 }
 
-export function isValidAnswer(answer: any): boolean {
+export function isValidAnswer(answer: AnswerObject | string | null | undefined): boolean {
   const text = extractTextFromAnswer(answer);
-  return typeof text === 'string' && text.trim().length > 0;
+  return text.trim().length > 0;
 }
 
-export function formatAnswerForDisplay(answer: any, opts?: { separator?: string }): any {
+export function formatAnswerForDisplay(answer: AnswerObject | string | null | undefined): string {
   if (!answer) return '';
   let text = extractTextFromAnswer(answer);
   if (!text) return '';
@@ -65,10 +92,11 @@ export function formatAnswerForDisplay(answer: any, opts?: { separator?: string 
   return text;
 }
 
-export function extractMetadata(answer: any, fields?: string[]): any {
-  const out: any = {};
+export function extractMetadata(answer: AnswerObject | null | undefined, fields?: string[]): MetadataOutput {
+  const out: MetadataOutput = {};
   if (!answer || typeof answer !== 'object') return out;
-  const candidates = {
+
+  const candidates: Record<string, unknown> = {
     confidence: answer.confidence,
     model: answer.model,
     tokens: answer.tokens,
@@ -76,37 +104,52 @@ export function extractMetadata(answer: any, fields?: string[]): any {
     max_tokens: answer.max_tokens,
     ...(answer.metadata || {})
   };
+
   if (Array.isArray(fields) && fields.length > 0) {
     for (const k of fields) {
-      if (k in candidates) out[k] = candidates[k];
+      // include only defined, non-null values
+      if (k in candidates && candidates[k] != null) out[k] = candidates[k];
     }
     return out;
   }
+
   // default: include known keys
   for (const k of Object.keys(candidates)) {
-    if (candidates[k] !== undefined) out[k] = candidates[k];
+    // skip undefined and null values
+    if (candidates[k] != null) out[k] = candidates[k];
   }
   return out;
 }
 
-export function mergeAnswers(answers: any[], opts?: { separator?: string, strategy?: Function, deduplicate?: boolean }): any {
+type MergedAnswer = {
+  text: string;
+  metadata: MetadataOutput;
+} | null;
+
+export function mergeAnswers(
+  answers: Array<AnswerObject | string | null | undefined>,
+  opts?: { separator?: string; strategy?: (a: unknown, b: unknown) => unknown; deduplicate?: boolean }
+): MergedAnswer {
   const validItems = answers.filter(a => isValidAnswer(a));
   if (validItems.length === 0) return null;
 
   // Strategy override
   if (opts?.strategy && typeof opts.strategy === 'function' && answers.length >= 2) {
-    return opts.strategy(answers[0], answers[1]);
+    const result = opts.strategy(answers[0], answers[1]);
+    return result as MergedAnswer;
   }
 
   // If only one valid and it's an object, return it as-is
   if (validItems.length === 1 && typeof validItems[0] === 'object') {
-    return validItems[0];
+    const singleResult = validItems[0] as AnswerObject;
+    return { text: extractTextFromAnswer(singleResult), metadata: extractMetadata(singleResult) };
   }
 
   const areAllStrings = validItems.every(a => typeof a === 'string');
   const joinSep = areAllStrings ? (opts?.separator ?? ' ') : (opts?.separator ?? '\n---\n');
   const valid = validItems.map(a => (typeof a === 'string' ? a : extractTextFromAnswer(a)));
   let combined = valid.join(joinSep);
+
   if (opts?.deduplicate) {
     const seen = new Set<string>();
     const parts: string[] = [];
@@ -115,13 +158,18 @@ export function mergeAnswers(answers: any[], opts?: { separator?: string, strate
     }
     combined = parts.join(joinSep);
   }
-  const metadata: any = {};
+
+  const metadata: MetadataOutput = {};
   // compute simple average confidence if objects provided
-  const confidences = answers.map(a => (a && typeof a === 'object' && a.confidence) ? a.confidence : null).filter((c: any) => typeof c === 'number') as number[];
+  const confidences = answers
+    .map(a => (a && typeof a === 'object' && 'confidence' in a && typeof a.confidence === 'number') ? a.confidence : null)
+    .filter((c): c is number => c !== null);
+
   if (confidences.length) {
     const avg = confidences.reduce((s, v) => s + v, 0) / confidences.length;
     metadata.average_confidence = Math.round(avg * 100) / 100;
   }
+
   return { text: combined, metadata };
 }
 
@@ -136,8 +184,8 @@ export const queryPinecone = async (
 ): Promise<QueryResponse<RecordMetadata> | null> => {
   // eslint-disable-next-line no-console
   console.log('OA: entered queryPinecone');
-  const query_embedding = await getOpenAIEmbedding(question);
-  const result = await getPineconeIndex().query({
+  const query_embedding = await OpenAIClientManager.getEmbedding(question);
+  const result = await PineconeManager.getIndex().query({
     vector: query_embedding,
     topK: 3,
     includeValues: false,
@@ -151,11 +199,11 @@ export const queryPinecone = async (
 
   if (result.matches && result.matches.length > 0) {
     // Filter matches by similarity threshold
-    const filteredMatches = result.matches.filter(match =>
+    const filteredMatches = result.matches.filter((match: QueryResponse<RecordMetadata>['matches'][number]) =>
       (match.score || 0) >= similarityThreshold
     );
 
-    if (DEBUG === 'true') {
+    if (isDebug()) {
       console.log(`Top matches for '${question}' (threshold: ${similarityThreshold}):`);
       console.log(`Original matches: ${result.matches.length}, Filtered: ${filteredMatches.length}`);
 
@@ -232,12 +280,12 @@ export async function getAnswer(
 
   // If no context and fallback is disabled, return early
   if (!hasContext && !fallbackToGeneralKnowledge) {
-    if (DEBUG === 'true') {
+    if (isDebug()) {
       console.log("=== Debug Info ===");
-      console.log("Question:", question);
-      console.log("Similarity Threshold:", similarityThreshold);
-      console.log("Fallback to General Knowledge:", fallbackToGeneralKnowledge);
-      console.log("Context found:", false);
+      console.log(`Question: ${question}`);
+      console.log(`Similarity Threshold: ${similarityThreshold}`);
+      console.log(`Fallback to General Knowledge: ${fallbackToGeneralKnowledge}`);
+      console.log(`Context found: false`);
       console.log("==================");
     }
 
@@ -256,21 +304,21 @@ export async function getAnswer(
     userPrompt = `Question: ${question}\n\nI couldn't find any relevant context to answer this question. Please provide a general response based on your training knowledge.`;
   }
 
-  if (DEBUG === 'true') {
+  if (isDebug()) {
     console.log("=== Debug Info ===");
-    console.log("Question:", question);
-    console.log("Similarity Threshold:", similarityThreshold);
-    console.log("Fallback to General Knowledge:", fallbackToGeneralKnowledge);
-    console.log("Context found:", hasContext);
+    console.log(`Question: ${question}`);
+    console.log(`Similarity Threshold: ${similarityThreshold}`);
+    console.log(`Fallback to General Knowledge: ${fallbackToGeneralKnowledge}`);
+    console.log(`Context found: ${hasContext}`);
     if (hasContext) {
-      console.log("Context length:", context.length);
-      console.log("Number of context chunks:", contextChunkCount);
+      console.log(`Context length: ${context.length}`);
+      console.log(`Number of context chunks: ${contextChunkCount}`);
     }
     console.log("==================");
   }
 
   // Get answer from OpenAI
-  const completion = await getOpenAIClient().chat.completions.create({
+  const completion = await OpenAIClientManager.getClient().chat.completions.create({
     model: CHAT_MODEL!,
     messages: [
       { role: "system", content: systemPrompt },
@@ -282,7 +330,7 @@ export async function getAnswer(
 
   const answer = completion.choices[0]?.message?.content || "I couldn't generate an answer.";
 
-  if (DEBUG === 'true') {
+  if (isDebug()) {
     console.log("Generated answer:", answer);
   }
 

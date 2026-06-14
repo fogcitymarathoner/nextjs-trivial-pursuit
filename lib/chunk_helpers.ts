@@ -1,6 +1,3 @@
-import { getOpenAIClient } from "./openai";
-import { EMBEDDING_MODEL } from "@/config/env";
-
 export interface ChunkMetadata {
   text: string;
   title: string;
@@ -16,14 +13,6 @@ export interface ChunkMetadata {
 export const generateChunkId = (chunkText: string): string =>
   Buffer.from(chunkText.substring(0, 100)).toString("base64");
 
-export const embed = async (text: string): Promise<number[]> => {
-  const openai = getOpenAIClient();
-  const response = await openai.embeddings.create({
-    model: EMBEDDING_MODEL!,
-    input: text,
-  });
-  return response.data[0].embedding;
-};
 
 export const processChunkMetadata = (
   chunkText: string,

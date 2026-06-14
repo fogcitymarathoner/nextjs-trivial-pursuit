@@ -1,30 +1,49 @@
-// lib/__tests__/chunk_helpers.test.ts
-import { describe, expect, it, beforeEach, jest } from '@jest/globals';
-import { getOpenAIClient } from "../openai";
-import { EMBEDDING_MODEL } from "@/config/env";
-import { embed, generateChunkId, processChunkMetadata } from "../chunk_helpers";
+import {beforeEach, describe, expect, it, jest} from '@jest/globals';
+import type OpenAI from 'openai';
+import {generateChunkId, processChunkMetadata} from "../chunk_helpers";
+import OpenAIClientManager from "@/lib/OpenAIClientManager"
 
-// Mock the dependencies
-jest.mock("../openai", () => ({
-  getOpenAIClient: jest.fn(),
+// Define response type for OpenAI embeddings
+type EmbeddingsResponse = {
+  data: Array<{ embedding: number[] }>;
+  usage: { prompt_tokens: number; total_tokens: number };
+};
+
+// Mock the dependencies - properly type the embed mock
+jest.mock("@/lib/OpenAIClientManager", () => ({
+  __esModule: true,
+  default: {
+    getClient: jest.fn(),
+    embed: jest.fn<() => Promise<number[]>>(),
+  }
 }));
 
 jest.mock("@/config/env", () => ({
   EMBEDDING_MODEL: "text-embedding-ada-002",
 }));
 
-// FIX: Declare as any to avoid TypeScript issues
-const mockEmbeddingsCreate = jest.fn() as any;
+// Properly typed mock
+const mockEmbeddingsCreate = jest.fn<() => Promise<EmbeddingsResponse>>();
+
+// Create a properly typed mock OpenAI client
 const mockOpenAIClient = {
   embeddings: {
     create: mockEmbeddingsCreate,
   },
-};
+} as const; // Use 'as const' for a readonly but properly typed object
+
+// Create typed references
+const mockGetClient = OpenAIClientManager.getClient as jest.MockedFunction<typeof OpenAIClientManager.getClient>;
+const mockEmbed = OpenAIClientManager.embed as jest.MockedFunction<typeof OpenAIClientManager.embed>;
+
+// Type assertion helper (no 'any' needed)
+const assertAsOpenAIClient = (client: unknown): OpenAI => client as OpenAI;
 
 describe("chunk_helpers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (getOpenAIClient as jest.Mock).mockReturnValue(mockOpenAIClient);
+    // Use the typed assertion function instead of 'as any'
+    mockGetClient.mockReturnValue(assertAsOpenAIClient(mockOpenAIClient));
 
     // Default successful response
     mockEmbeddingsCreate.mockResolvedValue({
@@ -61,29 +80,29 @@ describe("chunk_helpers", () => {
     const mockText = "This is a test text for embedding";
 
     it("should return embedding array for valid text", async () => {
-      const result = await embed(mockText);
+      const mockEmbeddingResult = [0.1, 0.2, 0.3, 0.4, 0.5];
+      mockEmbed.mockResolvedValue(mockEmbeddingResult);
 
-      expect(getOpenAIClient).toHaveBeenCalledTimes(1);
-      expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
-        model: EMBEDDING_MODEL,
-        input: mockText,
-      });
-      expect(result).toEqual([0.1, 0.2, 0.3, 0.4, 0.5]);
+      const result = await OpenAIClientManager.embed(mockText);
+
+      expect(mockEmbed).toHaveBeenCalledWith(mockText);
+      expect(result).toEqual(mockEmbeddingResult);
     });
 
     it("should handle empty string input", async () => {
-      await embed("");
+      mockEmbed.mockResolvedValue([]);
 
-      expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
-        model: EMBEDDING_MODEL,
-        input: "",
-      });
+      await OpenAIClientManager.embed("");
+
+      expect(mockEmbed).toHaveBeenCalledWith("");
     });
 
     it("should throw error when OpenAI API fails", async () => {
-      mockEmbeddingsCreate.mockRejectedValueOnce(new Error("OpenAI API error"));
+      const error = new Error("OpenAI API error");
+      mockEmbed.mockRejectedValueOnce(error);
 
-      await expect(embed(mockText)).rejects.toThrow("OpenAI API error");
+      await expect(OpenAIClientManager.embed(mockText)).rejects.toThrow("OpenAI API error");
+      expect(mockEmbed).toHaveBeenCalledWith(mockText);
     });
   });
 

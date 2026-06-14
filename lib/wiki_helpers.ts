@@ -82,7 +82,7 @@ export const fetchWithRetry = async <T>(url: string, headers: HeadersInit, maxRe
       } catch (error) {
         if (attempt === maxRetries) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          return new Promise((_res, reject) => setImmediate(() => reject(new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`))));
+          return new Promise((_res, reject) => setTimeout(() => reject(new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`)), 0));
         }
 
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -121,7 +121,7 @@ export const fetchWithRetry = async <T>(url: string, headers: HeadersInit, maxRe
     } catch (error) {
       if (attempt === maxRetries) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        return new Promise((_res, reject) => setImmediate(() => reject(new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`))));
+        return new Promise((_res, reject) => setTimeout(() => reject(new Error(`Failed after ${maxRetries} attempts: ${errorMessage}`)), 0));
       }
 
       const errorMessage = error instanceof Error ? error.message : String(error);

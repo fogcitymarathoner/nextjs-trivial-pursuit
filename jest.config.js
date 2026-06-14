@@ -17,7 +17,8 @@ module.exports = {
         '/node_modules/',
         '/.next/',
         '/out/',
-        '/dist/'
+        '/dist/',
+        '/tmp/'
     ],
     modulePathIgnorePatterns: [
         '<rootDir>/.next/',
@@ -50,6 +51,7 @@ module.exports = {
         "!**/*.spec.tsx",
         "!**/*.d.ts",
         "!**/node_modules/**",
+        "!**/tmp/**",
     ],
     
     coverageReporters: ["text", "text-summary", "lcov", "html"],

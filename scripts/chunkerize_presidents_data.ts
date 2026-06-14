@@ -3,13 +3,14 @@
 // To run - npx tsx scripts/chunkerize_presidents_data.ts
 import { DEBUG, PINECONE_API_KEY, PINECONE_INDEX_DEV } from "@/config/env";
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
-import { removeHtmlTagsCheerio } from '../lib/html_tag_helpers';
+import { removeHtmlTagsCheerio } from '@/lib/html_tag_helpers';
 import { Pinecone } from '@pinecone-database/pinecone';
 
 // Import helpers (you'll need to create these TypeScript versions)
-import { embed, generateChunkId } from '../lib/chunk_helpers';
-import { getPresidentTitles } from '../lib/presidential_title_helpers';
-import { getWikiPage } from '../lib/wiki_helpers';
+import { generateChunkId } from '@/lib/chunk_helpers';
+import OpenAIClientManager from "@/lib/OpenAIClientManager"
+import { getPresidentTitles } from '@/lib/presidential_title_helpers';
+import { getWikiPage } from '@/lib/wiki_helpers';
 import { PineconeRecord } from "@pinecone-database/pinecone/dist/data/vectors/types";
 
 // Make sure the API key exists
@@ -74,7 +75,7 @@ const ingestPresidentialContent = async (): Promise<void> => {
         const chunkIndex = idx + 1;
         const links: string[] = [];
 
-        const vector = await embed(chunkText);
+        const vector = await OpenAIClientManager.embed(chunkText);
 
         if (DEBUG === 'true')
           console.log(vector.length, chunkIndex);

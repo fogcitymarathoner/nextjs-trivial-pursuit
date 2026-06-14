@@ -1,49 +1,54 @@
-// @ts-nocheck
-import { getOpenAIClient, getOpenAIEmbedding, warmupChatCompletion } from "../openai";
+import { describe, expect, it, beforeEach, afterEach, jest } from '@jest/globals';
+import type OpenAI from 'openai';
+import OpenAIClientManager from '../OpenAIClientManager';
 
-// Mock environment variables BEFORE importing any modules that use them
-jest.mock("@/config/env", () => ({
-  EMBEDDING_MODEL: "text-embedding-3-small",
-  CHAT_MODEL: "gpt-3.5-turbo",
+// Define the response types
+type EmbeddingsResponse = {
+  data: Array<{ embedding: number[] }>;
+  usage?: { prompt_tokens: number; total_tokens: number };
+};
+
+type ChatCompletionResponse = {
+  choices: Array<{ message: { content: string | null } }>;
+};
+
+// Mock environment variables
+jest.mock('@/config/env', () => ({
+  EMBEDDING_MODEL: 'text-embedding-3-small',
+  CHAT_MODEL: 'gpt-3.5-turbo',
 }));
 
-// Create mock functions
-const mockEmbeddingsCreate = jest.fn();
-const mockChatCompletionsCreate = jest.fn();
+// Create mock functions that will be used across the test
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockEmbeddingsCreate = jest.fn() as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockChatCompletionsCreate = jest.fn() as any;
 
-// Mock OpenAI module
-jest.mock("openai", () => {
-  return {
-    __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
-      embeddings: {
-        create: mockEmbeddingsCreate,
+// Mock OpenAI module - define the mock inline to avoid hoisting issues
+jest.mock('openai', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    embeddings: {
+      create: mockEmbeddingsCreate,
+    },
+    chat: {
+      completions: {
+        create: mockChatCompletionsCreate,
       },
-      chat: {
-        completions: {
-          create: mockChatCompletionsCreate,
-        },
-      },
-    })),
-  };
-});
-
-// Import OpenAI after mock
-import OpenAI from "openai";
-
-// Set environment variables directly for the test
-process.env.CHAT_MODEL = "gpt-3.5-turbo";
-process.env.OPENAI_API_KEY = "test-api-key";
+    },
+  })),
+}));
 
 const originalEnv = process.env;
 
-describe("OpenAI Client", () => {
+describe('OpenAIClientManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env = { ...originalEnv, OPENAI_API_KEY: "test-api-key" };
+    process.env = { ...originalEnv, OPENAI_API_KEY: 'test-api-key' };
+    process.env.CHAT_MODEL = 'gpt-3.5-turbo';
 
-    // Ensure CHAT_MODEL is set
-    process.env.CHAT_MODEL = "gpt-3.5-turbo";
+    // Reset the client by setting it to null
+    OpenAIClientManager.setClient(null);
 
     // Setup default mock implementations
     mockEmbeddingsCreate.mockResolvedValue({
@@ -51,7 +56,7 @@ describe("OpenAI Client", () => {
     });
 
     mockChatCompletionsCreate.mockResolvedValue({
-      choices: [{ message: { content: "warmed up" } }],
+      choices: [{ message: { content: 'warmed up' } }],
     });
   });
 
@@ -59,54 +64,102 @@ describe("OpenAI Client", () => {
     process.env = originalEnv;
   });
 
-  describe("getOpenAIClient", () => {
-    it("should create singleton client", () => {
-      const client1 = getOpenAIClient();
-      const client2 = getOpenAIClient();
+  describe('getClient', () => {
+    it('should create singleton client', () => {
+      const client1 = OpenAIClientManager.getClient();
+      const client2 = OpenAIClientManager.getClient();
 
       expect(client1).toBe(client2);
-      expect(OpenAI).toHaveBeenCalledTimes(1);
+
+      // Get the mocked constructor
+      const { default: MockedOpenAI } = jest.requireMock('openai') as { default: jest.Mock };
+      expect(MockedOpenAI).toHaveBeenCalledTimes(1);
+      expect(MockedOpenAI).toHaveBeenCalledWith({ apiKey: 'test-api-key' });
+    });
+
+    it('should reuse existing client', () => {
+      const client1 = OpenAIClientManager.getClient();
+      const client2 = OpenAIClientManager.getClient();
+
+      expect(client1).toBe(client2);
+
+      const { default: MockedOpenAI } = jest.requireMock('openai') as { default: jest.Mock };
+      expect(MockedOpenAI).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe("getOpenAIEmbedding", () => {
-    it("should get embedding for question", async () => {
+  describe('getEmbedding', () => {
+    it('should get embedding for question', async () => {
       const mockEmbedding = [0.5, 0.6, 0.7];
       mockEmbeddingsCreate.mockResolvedValueOnce({
         data: [{ embedding: mockEmbedding }],
       });
 
-      const result = await getOpenAIEmbedding("test question");
+      const result = await OpenAIClientManager.getEmbedding('test question');
 
       expect(result).toEqual(mockEmbedding);
       expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
-        model: "text-embedding-3-small",
-        input: "test question",
+        model: 'text-embedding-3-small',
+        input: 'test question',
       });
     });
 
-    it("should handle errors", async () => {
-      mockEmbeddingsCreate.mockRejectedValueOnce(new Error("API Error"));
+    it('should handle errors', async () => {
+      mockEmbeddingsCreate.mockRejectedValueOnce(new Error('API Error'));
 
-      await expect(getOpenAIEmbedding("test")).rejects.toThrow("API Error");
+      await expect(OpenAIClientManager.getEmbedding('test')).rejects.toThrow('API Error');
     });
   });
 
-  describe("warmupChatCompletion", () => {
-    it("should send warmup request", async () => {
-      await warmupChatCompletion();
+  describe('embed', () => {
+    it('should embed text', async () => {
+      const mockEmbedding = [0.5, 0.6, 0.7];
+      mockEmbeddingsCreate.mockResolvedValueOnce({
+        data: [{ embedding: mockEmbedding }],
+      });
 
-      expect(mockChatCompletionsCreate).toHaveBeenCalledWith({
-        model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: "warmup" }],
+      const result = await OpenAIClientManager.embed('test text');
+
+      expect(result).toEqual(mockEmbedding);
+      expect(mockEmbeddingsCreate).toHaveBeenCalledWith({
+        model: 'text-embedding-3-small',
+        input: 'test text',
       });
     });
 
-    it("should handle errors in warmup", async () => {
-      const error = new Error("Warmup failed");
-      mockChatCompletionsCreate.mockRejectedValueOnce(error);
+    it('should handle errors in embed', async () => {
+      mockEmbeddingsCreate.mockRejectedValueOnce(new Error('Embedding failed'));
 
-      await expect(warmupChatCompletion()).rejects.toThrow("Warmup failed");
+      await expect(OpenAIClientManager.embed('test')).rejects.toThrow('Embedding failed');
+    });
+  });
+
+  describe('warmupChatCompletion', () => {
+    it('should send warmup request', async () => {
+      await OpenAIClientManager.warmupChatCompletion();
+
+      expect(mockChatCompletionsCreate).toHaveBeenCalledWith({
+        model: 'gpt-3.5-turbo',
+        messages: [{ role: 'user', content: 'warmup' }],
+      });
+    });
+
+    it('should handle errors in warmup', async () => {
+      mockChatCompletionsCreate.mockRejectedValueOnce(new Error('Warmup failed'));
+
+      await expect(OpenAIClientManager.warmupChatCompletion()).rejects.toThrow('Warmup failed');
+    });
+  });
+
+  describe('setClient', () => {
+    it('should allow setting custom client for testing', () => {
+      const mockCustomClient = {
+        embeddings: { create: jest.fn() },
+        chat: { completions: { create: jest.fn() } },
+      } as unknown as OpenAI;
+
+      OpenAIClientManager.setClient(mockCustomClient);
+      expect(OpenAIClientManager.getClient()).toBe(mockCustomClient);
     });
   });
 });
