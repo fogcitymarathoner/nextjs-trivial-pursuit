@@ -6,12 +6,13 @@ FROM node:20-slim AS base
 FROM base AS deps
 WORKDIR /app
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy package files (using yarn.lock since your project uses yarn)
+COPY package.json yarn.lock ./
 
-# Install dependencies with npm (no cache mount issues)
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --only=production=false
+# Install dependencies with yarn (without cache clean to avoid EBUSY)
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
+    --mount=type=cache,target=/root/.yarn \
+    yarn install --frozen-lockfile --production=false
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -25,9 +26,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build the application
+# Build the application with BuildKit cache mount for Next.js cache
 RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+    yarn build
 
 # Production image
 FROM base AS runner
@@ -47,7 +48,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json* ./
+COPY package.json yarn.lock ./
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
