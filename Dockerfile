@@ -2,25 +2,16 @@
 # Use Debian-based Node.js image (better compatibility with native modules)
 FROM node:20-slim AS base
 
-# Install system dependencies if needed (optional, uncomment if required)
-# RUN apt-get update && apt-get install -y \
-#     python3 \
-#     make \
-#     g++ \
-#     && rm -rf /var/lib/apt/lists/*
-
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json* ./
 
-# Install ALL dependencies with cache optimization
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
-    --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile --production=false && \
-    yarn cache clean
+# Install dependencies with npm (no cache mount issues)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production=false
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -34,9 +25,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
-# Build the application with BuildKit cache mount for Next.js cache
+# Build the application
 RUN --mount=type=cache,target=/app/.next/cache \
-    yarn build
+    npm run build
 
 # Production image
 FROM base AS runner
@@ -56,7 +47,7 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json* ./
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
