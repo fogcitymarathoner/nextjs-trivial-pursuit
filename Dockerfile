@@ -4,17 +4,16 @@ FROM node:20-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
 # Copy package files
 COPY package.json yarn.lock ./
 
-# Install dependencies with BuildKit cache mount for faster CI builds
+# Install ALL dependencies (including devDependencies) for build
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
     --mount=type=cache,target=/root/.yarn \
-    yarn install --frozen-lockfile --production=false && \
-    yarn cache clean
+    yarn install --frozen-lockfile --production=false --ignore-optional
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -39,14 +38,20 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Install production dependencies only
+COPY package.json yarn.lock ./
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn \
+    --mount=type=cache,target=/root/.yarn \
+    yarn install --frozen-lockfile --production=true --ignore-optional
+
 # Create non-root user (combined into single RUN for fewer layers)
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy necessary files from builder
-COPY --from=builder /app/public ./public
+# Copy built application from builder
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
