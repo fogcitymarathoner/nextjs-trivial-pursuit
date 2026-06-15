@@ -14,7 +14,7 @@ jest.mock('@/config/pinecone/pinecone_indexes', () => ({
     {
       label: 'Missing Index Name',
       indexName: '',
-      description: 'Should be filtered out',
+      description: 'Should still be visible in the dropdown',
     },
   ],
 }));
@@ -47,7 +47,7 @@ describe('QA Page', () => {
       {
         label: 'Missing Index Name',
         indexName: '',
-        description: 'Should be filtered out',
+        description: 'Should still be visible in the dropdown',
       },
     );
   });
@@ -59,12 +59,12 @@ describe('QA Page', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Q&A' })).toBeInTheDocument();
   });
 
-  it('passes only indexes with configured Pinecone index names', () => {
+  it('passes all configured index labels to the client', () => {
     render(<QaPage />);
 
-    expect(screen.getByTestId('index-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('index-count')).toHaveTextContent('2');
     expect(screen.getByText('Production Index:prod-index')).toBeInTheDocument();
-    expect(screen.queryByText('Missing Index Name:')).not.toBeInTheDocument();
+    expect(screen.getByText('Missing Index Name:')).toBeInTheDocument();
   });
 
   it('passes an empty index list when no indexes are configured', () => {
@@ -85,6 +85,11 @@ describe('QA Page', () => {
             label: 'Production Index',
             indexName: 'prod-index',
             description: 'Production environment',
+          },
+          {
+            label: 'Missing Index Name',
+            indexName: '',
+            description: 'Should still be visible in the dropdown',
           },
         ],
       },
