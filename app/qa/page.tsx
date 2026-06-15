@@ -3,7 +3,7 @@ import type { PineconeIndexOption } from '@/config/pinecone/types';
 import { QaClient } from './qa-client';
 
 export default function QaPage() {
-  const indexes: PineconeIndexOption[] = PINECONE_INDEXES.filter(index => index.indexName);
+  const indexes: PineconeIndexOption[] = PINECONE_INDEXES;
 
   return <QaClient indexes={indexes} />;
 }

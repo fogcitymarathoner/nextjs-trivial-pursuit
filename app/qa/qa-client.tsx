@@ -136,7 +136,7 @@ export function QaClient({ indexes }: QaClientProps) {
               <h2 className="mb-3 text-sm font-semibold text-slate-800">Pinecone Index</h2>
               <PineconeDropdown
                 indexes={indexes}
-                defaultValue={selectedIndexName}
+                defaultValue={selectedIndexName || pineconeIndexLabel}
                 placeholder="Select a Pinecone index"
                 onSelect={index => setPineconeIndexLabel(index.label)}
               />

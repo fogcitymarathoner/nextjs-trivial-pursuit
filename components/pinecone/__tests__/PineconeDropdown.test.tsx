@@ -56,4 +56,31 @@ describe('PineconeDropdown', () => {
     render(<PineconeDropdown indexes={indexes} />);
     fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: 'prod-index' } });
   });
+
+  it('uses the label as the option value when an index name is not configured', () => {
+    const onSelect = jest.fn();
+    const unconfiguredIndexes: PineconeIndexOption[] = [
+      {
+        label: 'Presidents',
+        indexName: '',
+        description: 'Historical president documents',
+      },
+    ];
+
+    render(
+      <PineconeDropdown
+        indexes={unconfiguredIndexes}
+        defaultValue="Presidents"
+        onSelect={onSelect}
+      />,
+    );
+
+    const select = screen.getByRole('combobox');
+    expect(select).toHaveValue('Presidents');
+    expect(screen.getByRole('option', { name: 'Presidents - Historical president documents' })).toBeInTheDocument();
+
+    fireEvent.change(select, { target: { value: 'Presidents' } });
+
+    expect(onSelect).toHaveBeenCalledWith(unconfiguredIndexes[0]);
+  });
 });

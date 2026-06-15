@@ -18,9 +18,9 @@ export const PineconeDropdown: React.FC<PineconeDropdownProps> = ({
                                                                     className = ""
                                                                   }) => {
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedIndexName = e.target.value;
+    const selectedValue = e.target.value;
     const selected = indexes.find(
-      index => index.indexName === selectedIndexName
+      index => (index.indexName || index.label) === selectedValue
     );
 
     if (selected && onSelect) {
@@ -45,7 +45,7 @@ export const PineconeDropdown: React.FC<PineconeDropdownProps> = ({
         </option>
 
         {indexes.map((index) => (
-          <option key={index.indexName} value={index.indexName}>
+          <option key={`${index.label}-${index.indexName || 'unconfigured'}`} value={index.indexName || index.label}>
             {index.label}
             {index.description && ` - ${index.description}`}
           </option>
