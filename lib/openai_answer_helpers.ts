@@ -242,55 +242,48 @@ export const queryPinecone = async (
   }
 };
 
+// openai_answer_helpers.ts
+
 /**
- * Generates an answer to a question using context from Pinecone and OpenAI chat completion.
- * @param question The question to answer
- * @param similarityThreshold Minimum similarity score (0-1) for context matches. Defaults to 0.5.
- * @param fallbackToGeneralKnowledge Whether to use LLM's general knowledge when no context found. Defaults to true.
- * @param pineconeIndexName Optional human-readable name of the Pinecone index to query. Defaults to PINECONE_INDEX_DEV env var.
- * @returns Promise<string> The generated answer
+ * Queries Pinecone for relevant context matches
+ * @param question The question to search for
+ * @param similarityThreshold Minimum similarity score (0-1) for context matches
+ * @param pineconeIndexName The actual Pinecone index name to query
+ * @returns Promise<PineconeQueryResult | null> The query results or null if error
  */
-export async function getAnswer(
+export async function getResultsFromVectorDB(
   question: string,
-  similarityThreshold: number = 0.5,
-  fallbackToGeneralKnowledge: boolean = true,
-  pineconeIndexLabel?: string  // Human-readable name from UI
-): Promise<string> {
-  // eslint-disable-next-line no-console
-  console.log('OA: entered getAnswer');
+  similarityThreshold: number,
+  pineconeIndexName: string
+): Promise<any | null> {
+  try {
+    console.log(`DB: Querying Pinecone index "${pineconeIndexName}" with threshold ${similarityThreshold}`);
 
-  // Determine which Pinecone index to use
-  let indexToUse: string | undefined;
+    const queryResult = await queryPinecone(
+      question,
+      similarityThreshold,
+      pineconeIndexName
+    );
 
-  if (pineconeIndexLabel) {
-    // Lookup by index name from the configuration
-    const pineconeIndexName = getIndexNameByLabel(pineconeIndexLabel);
-    // For validating labels
-    const VALID_LABELS = PINECONE_INDEXES.map(idx => idx.label);
-
-    // Then in your validation:
-    if (!VALID_LABELS.includes(pineconeIndexLabel)) {
-      throw new Error(`No Pinecone index found with name: ${pineconeIndexLabel}. Available indexes: ${VALID_LABELS.join(', ')}`);
+    if (!queryResult?.matches?.length) {
+      console.log(`DB: No matches found in index "${pineconeIndexName}" at threshold ${similarityThreshold}`);
+    } else {
+      console.log(`DB: Found ${queryResult.matches.length} matches in index "${pineconeIndexName}"`);
     }
-    indexToUse = pineconeIndexName; // This is the actual Pinecone index name
-    console.log(`OA: Using index "${pineconeIndexLabel}" -> Pinecone index: ${indexToUse}`);
-  } else {
-    // Fall back to env var
-    indexToUse = process.env.PINECONE_INDEX_DEV;
-    if (!indexToUse) {
-      throw new Error('No Pinecone index specified. Either pass pineconeIndexName or set PINECONE_INDEX_DEV in environment');
-    }
-    console.log(`OA: Using default Pinecone index from env: ${indexToUse}`);
+
+    return queryResult;
+  } catch (error) {
+    console.error(`DB: Error querying Pinecone index "${pineconeIndexName}":`, error);
+    return null;
   }
+}
 
-  // Query Pinecone for relevant context with threshold and specified index
-  const queryResult = await queryPinecone(
-    question,
-    similarityThreshold,
-    indexToUse  // Pass the actual Pinecone index name to queryPinecone
-  );
-
-  // Build context from query results
+/**
+ * Builds context string from query results
+ * @param queryResult The query results from Pinecone
+ * @returns Object containing context string and chunk count
+ */
+export function buildContextFromResults(queryResult: any | null): { context: string; contextChunkCount: number } {
   let context = "";
   let contextChunkCount = 0;
 
@@ -314,6 +307,74 @@ export async function getAnswer(
     context = contextParts.join("\n---\n");
     contextChunkCount = contextParts.length;
   }
+
+  return { context, contextChunkCount };
+}
+
+/**
+ * Generates an answer to a question using context from Pinecone and OpenAI chat completion.
+ * @param question The question to answer
+ * @param similarityThreshold Minimum similarity score (0-1) for context matches. Defaults to 0.5.
+ * @param fallbackToGeneralKnowledge Whether to use LLM's general knowledge when no context found. Defaults to true.
+ * @param pineconeIndexLabel Optional human-readable name of the Pinecone index to query. Defaults to PINECONE_INDEX_DEV env var.
+ * @param queryResult Optional pre-fetched query results from vector DB. If not provided, will query Pinecone internally.
+ * @returns Promise<string> The generated answer
+ */
+export async function getAnswer(
+  question: string,
+  similarityThreshold: number = 0.5,
+  fallbackToGeneralKnowledge: boolean = true,
+  pineconeIndexLabel?: string,
+  queryResult?: any | null  // New parameter for pre-fetched results
+): Promise<string> {
+  // eslint-disable-next-line no-console
+  console.log('OA: entered getAnswer');
+
+  // Determine which Pinecone index to use (if we need to query)
+  let indexToUse: string | undefined;
+  let actualQueryResult = queryResult;
+
+  // If queryResult wasn't provided, we need to query Pinecone
+  if (actualQueryResult === undefined) {
+    if (pineconeIndexLabel) {
+      // Lookup by index name from the configuration
+      const pineconeIndexName = getIndexNameByLabel(pineconeIndexLabel);
+      // For validating labels
+      const VALID_LABELS = PINECONE_INDEXES.map(idx => idx.label);
+
+      // Then in your validation:
+      if (!VALID_LABELS.includes(pineconeIndexLabel)) {
+        throw new Error(`No Pinecone index found with name: ${pineconeIndexLabel}. Available indexes: ${VALID_LABELS.join(', ')}`);
+      }
+      indexToUse = pineconeIndexName; // This is the actual Pinecone index name
+      console.log(`OA: Using index "${pineconeIndexLabel}" -> Pinecone index: ${indexToUse}`);
+    } else {
+      // Fall back to env var
+      indexToUse = process.env.PINECONE_INDEX_DEV;
+      if (!indexToUse) {
+        throw new Error('No Pinecone index specified. Either pass pineconeIndexName or set PINECONE_INDEX_DEV in environment');
+      }
+      console.log(`OA: Using default Pinecone index from env: ${indexToUse}`);
+    }
+
+    // Query Pinecone for relevant context with threshold and specified index
+    actualQueryResult = await queryPinecone(
+      question,
+      similarityThreshold,
+      indexToUse
+    );
+  } else {
+    console.log('OA: Using pre-fetched query results');
+    // If queryResult was provided but we need indexToUse for debug info
+    if (pineconeIndexLabel) {
+      indexToUse = getIndexNameByLabel(pineconeIndexLabel);
+    } else {
+      indexToUse = process.env.PINECONE_INDEX_DEV;
+    }
+  }
+
+  // Build context from query results
+  const { context, contextChunkCount } = buildContextFromResults(actualQueryResult);
 
   // Check if we found any context
   const hasContext = context !== "";
