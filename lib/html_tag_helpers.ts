@@ -1,5 +1,5 @@
 import * as cheerio from 'cheerio';
-import { AnyNode } from 'domhandler';
+import {AnyNode} from 'domhandler';
 
 export const removeHtmlTagsCheerio = (
   input: string | AnyNode | AnyNode[] | Buffer<ArrayBufferLike> | null | undefined
@@ -16,3 +16,4 @@ export const removeHtmlTagsCheerio = (
     return String(input);
   }
 }
+
