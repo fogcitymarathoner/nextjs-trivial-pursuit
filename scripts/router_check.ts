@@ -1,6 +1,7 @@
 // simple script to detect the router im using if i forget
 // To run - npx tsx scripts/router_check.ts
 // scripts/check-router.ts
+// To run - npx tsx scripts/router_check.ts
 import fs from 'fs';
 import path from 'path';
 

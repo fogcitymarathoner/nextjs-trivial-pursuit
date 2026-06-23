@@ -1,7 +1,7 @@
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "node",
     "noEmit": false,           // TypeScript produces compiled JavaScript files
-  }
+  },
+  "include": ["*.ts"]
 }

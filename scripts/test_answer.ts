@@ -4,7 +4,7 @@ import { getAnswer, getResultsFromVectorDB } from "@/lib/openai_answer_helpers";
 import { PINECONE_INDEXES, getIndexNameByLabel } from "@/config/pinecone/pinecone_indexes";
 import readline from 'readline';
 
-// To run - npx tsx scripts/test_answer.ts --env-file .env.local [options]
+
 // Examples:
 //   npx tsx scripts/test_answer.ts                              # Uses default threshold 0.4, fallback ON, default index
 //   npx tsx scripts/test_answer.ts --threshold 0.7              # Uses threshold 0.7, fallback ON, default index

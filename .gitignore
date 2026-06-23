@@ -15,7 +15,6 @@ yarn-error.log*
 .DS_Store
 .next/*
 credentials/
-data/
 garb.ps1
 .jest-cache/
 coverage/
