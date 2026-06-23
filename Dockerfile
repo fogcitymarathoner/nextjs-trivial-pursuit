@@ -6,6 +6,11 @@ FROM node:20-slim AS base
 FROM base AS deps
 WORKDIR /app
 
+# better-sqlite3 may need to compile native bindings during install.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
+
 # Copy package files (using yarn.lock since your project uses yarn)
 COPY package.json yarn.lock ./
 
