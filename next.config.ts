@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['192.168.0.23'],
+  typescript: {
+    tsconfigPath: 'tsconfig.build.json',
+  },
 
   // SWC is enabled by default in Next.js 15+ - no configuration needed
 
