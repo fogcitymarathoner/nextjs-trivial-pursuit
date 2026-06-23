@@ -21,3 +21,4 @@ coverage/
 dist/
 Microsoft/
 tmp
+next-env.d.ts
