@@ -7,12 +7,16 @@ export const metadata: Metadata = {
 
 const MarcPage = () => {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">About Marc</h1>
-      <p className="text-gray-600">
-        This page is dedicated to Marc.
-      </p>
-    </div>
+    <main className="app-page">
+      <div className="app-container">
+        <header className="page-heading">
+          <h1 className="page-title">About Marc</h1>
+          <p className="page-description">
+            This page is dedicated to Marc.
+          </p>
+        </header>
+      </div>
+    </main>
   );
 }
 

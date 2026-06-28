@@ -33,12 +33,7 @@ export const PineconeDropdown: React.FC<PineconeDropdownProps> = ({
       <select
         onChange={handleChange}
         defaultValue={defaultValue || ""}
-        className={`
-          w-full px-4 py-2 border border-gray-300 rounded-md 
-          focus:outline-none focus:ring-2 focus:ring-blue-500 
-          focus:border-blue-500 bg-white
-          ${className}
-        `}
+        className={`select-control ${className}`.trim()}
       >
         <option value="" disabled>
           {placeholder}
