@@ -8,26 +8,35 @@ export const metadata: Metadata = {
 
 const AboutPage = () => {
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">About This Project</h1>
-      <p className="text-gray-600">
-        This trivia app helps you test your knowledge with interesting questions.
-      </p>
-      <div className="flex flex-col gap-y-4 md:gap-y-8">
-        <p className="text-gray-600"><span>Deploys to </span>
-          <Link href="/">
-            GCP
-          </Link>
-        </p>
-        <h2>Stack</h2>
-        <ul>
-          <li>Node.js v24.14.0</li>
-          <li>Approuter</li>
-          <li>Pinecone</li>
-          <li>3k vectors .5 similiarity threshold</li>
-        </ul>
+    <main className="app-page">
+      <div className="app-container">
+        <header className="page-heading">
+          <h1 className="page-title">About This Project</h1>
+          <p className="page-description">
+            This trivia app helps you test your knowledge with interesting questions.
+          </p>
+        </header>
+
+        <section className="surface-panel surface-panel-spacious surface-panel-compact content-stack">
+          <p className="body-copy">
+            <span>Deploys to </span>
+            <Link href="/" className="content-link">
+              GCP
+            </Link>
+          </p>
+
+          <div className="surface-inner-item content-stack">
+            <h2 className="section-label">Stack</h2>
+            <ul className="content-list">
+              <li>Node.js v24.14.0</li>
+              <li>Approuter</li>
+              <li>Pinecone</li>
+              <li>3k vectors .5 similiarity threshold</li>
+            </ul>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
 

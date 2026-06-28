@@ -20,13 +20,13 @@ describe('Home Page', () => {
     expect(heading).toHaveTextContent('If this is blue and big, Tailwind is working!');
   });
 
-  it('applies all Tailwind CSS classes', () => {
+  it('applies shared global page classes', () => {
     render(<Home />);
     
     const heading = screen.getByRole('heading', { level: 1 });
-    expect(heading).toHaveClass('text-5xl');
-    expect(heading).toHaveClass('font-bold');
-    expect(heading).toHaveClass('text-blue-600');
+    expect(heading).toHaveClass('page-title');
+    expect(heading.closest('.app-container')).toBeInTheDocument();
+    expect(screen.getByText(/Use these global page/i).closest('.surface-panel')).toBeInTheDocument();
   });
 
   it('has correct heading level for accessibility', () => {

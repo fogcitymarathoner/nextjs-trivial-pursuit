@@ -13,9 +13,19 @@ export default function HomePage() {
   };
 
   return (
-    <main className="container mx-auto p-8">
-      <h1 className="text-2xl font-bold mb-6">Pinecone Index Selector</h1>
-      <IndexSelector indexes={PINECONE_INDEXES} onIndexSelected={handleIndexSelected} />
+    <main className="app-page">
+      <div className="app-container">
+        <header className="page-heading">
+          <h1 className="page-title">Pinecone Index Selector</h1>
+          <p className="page-description">
+            Select a configured Pinecone index for experimentation.
+          </p>
+        </header>
+
+        <section className="surface-panel surface-panel-spacious surface-panel-compact">
+          <IndexSelector indexes={PINECONE_INDEXES} onIndexSelected={handleIndexSelected} />
+        </section>
+      </div>
     </main>
   );
 }

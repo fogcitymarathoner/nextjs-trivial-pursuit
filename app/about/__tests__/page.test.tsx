@@ -49,10 +49,10 @@ describe('AboutPage', () => {
   });
 
   describe('Styling', () => {
-    it('applies correct container classes', () => {
+    it('applies shared page and panel classes', () => {
       const heading = screen.getByText(/about this project/i);
-      const container = heading.closest('div.space-y-6');
-      expect(container).toBeInTheDocument();
+      expect(heading.closest('.app-container')).toBeInTheDocument();
+      expect(screen.getByText('Node.js v24.14.0').closest('.surface-inner-item')).toBeInTheDocument();
     });
   });
 });

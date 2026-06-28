@@ -35,16 +35,16 @@ describe('MarcPage', () => {
   });
 
   describe('Styling', () => {
-    it('applies correct Tailwind classes', () => {
+    it('applies shared global page classes', () => {
       render(<MarcPage />);
       const heading = screen.getByRole('heading', { level: 1 });
-      expect(heading).toHaveClass('text-3xl', 'font-bold');
+      expect(heading).toHaveClass('page-title');
       
       const description = screen.getByText(/this page is dedicated to marc/i);
-      expect(description).toHaveClass('text-gray-600');
+      expect(description).toHaveClass('page-description');
       
-      const container = screen.getByText('About Marc').closest('div');
-      expect(container).toHaveClass('space-y-6');
+      const container = screen.getByText('About Marc').closest('.app-container');
+      expect(container).toBeInTheDocument();
     });
   });
 

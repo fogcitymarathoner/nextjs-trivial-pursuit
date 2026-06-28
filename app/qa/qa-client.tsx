@@ -87,33 +87,33 @@ export function QaClient({ indexes }: QaClientProps) {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-2 border-b border-slate-200 pb-5">
-          <h1 className="text-3xl font-semibold tracking-normal">Q&A</h1>
-          <p className="max-w-3xl text-sm text-slate-600">
+    <main className="app-page">
+      <div className="app-container">
+        <header className="page-heading">
+          <h1 className="page-title">Q&A</h1>
+          <p className="page-description">
             Ask against a Pinecone index, inspect the retrieved context, and control when general knowledge is allowed.
           </p>
         </header>
 
-        <form onSubmit={handleSubmit} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="flex flex-col gap-4">
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-slate-800">Question</span>
+        <form onSubmit={handleSubmit} className="split-workspace">
+          <section className="workspace-main">
+            <label className="field-stack">
+              <span className="field-label">Question</span>
               <textarea
                 value={question}
                 onChange={event => setQuestion(event.target.value)}
                 rows={8}
-                className="min-h-48 resize-y rounded-md border border-slate-300 bg-white px-4 py-3 text-base leading-7 shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                className="text-area"
                 placeholder="What did Calvin Coolidge say about the tax policy?"
               />
             </label>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="action-row">
               <button
                 type="submit"
                 disabled={isLoading || indexes.length === 0}
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+                className="button-primary"
               >
                 {isLoading ? 'Asking...' : 'Ask'}
               </button>
@@ -123,7 +123,7 @@ export function QaClient({ indexes }: QaClientProps) {
                   type="button"
                   disabled={isLoading}
                   onClick={() => askQuestion(true)}
-                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-amber-300 bg-amber-50 px-5 py-2 text-sm font-semibold text-amber-900 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="button-warning"
                 >
                   Retry With General Knowledge
                 </button>
@@ -131,9 +131,9 @@ export function QaClient({ indexes }: QaClientProps) {
             </div>
           </section>
 
-          <aside className="flex flex-col gap-4">
-            <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-slate-800">Pinecone Index</h2>
+          <aside className="workspace-sidebar">
+            <div className="surface-panel surface-panel-padded">
+              <h2 className="section-label">Pinecone Index</h2>
               <PineconeDropdown
                 indexes={indexes}
                 defaultValue={selectedIndexName || pineconeIndexLabel}
@@ -156,44 +156,44 @@ export function QaClient({ indexes }: QaClientProps) {
         </form>
 
         {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <div className="status-message status-message-danger">
             {error}
           </div>
         )}
 
         {result?.needsFallbackDecision && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="status-message status-message-warning">
             No Pinecone results were found and general knowledge is off.
           </div>
         )}
 
         {result?.answer && (
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-slate-900">Answer</h2>
-            <p className="whitespace-pre-wrap text-sm leading-7 text-slate-800">{result.answer}</p>
+          <section className="surface-panel surface-panel-spacious">
+            <h2 className="result-title">Answer</h2>
+            <p className="body-copy preserve-lines">{result.answer}</p>
           </section>
         )}
 
         {result && (
-          <details className="rounded-md border border-slate-200 bg-white shadow-sm">
-            <summary className="cursor-pointer px-5 py-4 text-sm font-semibold text-slate-900">
+          <details className="surface-panel">
+            <summary className="details-summary">
               Pinecone Results ({result.matches.length})
             </summary>
-            <div className="border-t border-slate-200 p-5">
+            <div className="details-body">
               {result.matches.length === 0 ? (
-                <p className="text-sm text-slate-600">No matches returned.</p>
+                <p className="body-copy-muted">No matches returned.</p>
               ) : (
-                <div className="grid gap-3">
+                <div className="inner-list">
                   {result.matches.map((match, index) => (
-                    <article key={`${match.id}-${index}`} className="rounded-md border border-slate-200 p-4">
-                      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-                        <span className="font-semibold text-slate-900">#{index + 1}</span>
+                    <article key={`${match.id}-${index}`} className="surface-inner-item">
+                      <div className="metadata-row">
+                        <span className="metadata-strong">#{index + 1}</span>
                         <span>ID: {match.id || 'Unknown'}</span>
                         <span>Score: {match.score?.toFixed(3) ?? 'n/a'}</span>
                         {match.metadata.source && <span>Source: {match.metadata.source}</span>}
                         {match.metadata.page && <span>Page: {String(match.metadata.page)}</span>}
                       </div>
-                      <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">
+                      <p className="body-copy preserve-lines">
                         {match.metadata.text || 'No text metadata returned.'}
                       </p>
                     </article>
