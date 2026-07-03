@@ -13,11 +13,21 @@ This file is the primary login endpoint for your application. It:
 The session cookie created here is what your proxy.ts middleware checks to determine
 if a user is authenticated and can access protected routes.
  */
+// app/api/auth/login/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
     try {
+        // Check if Firebase is initialized
+        if (!isFirebaseInitialized() || !adminAuth) {
+            console.error('Firebase Admin is not initialized. Check your credentials.');
+            return NextResponse.json(
+                { error: 'Server configuration error' },
+                { status: 500 }
+            );
+        }
+
         const { idToken } = await request.json();
 
         if (!idToken) {

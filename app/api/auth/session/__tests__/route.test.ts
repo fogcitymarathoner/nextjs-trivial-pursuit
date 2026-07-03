@@ -1,7 +1,7 @@
 // app/api/auth/session/__tests__/route.test.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { POST } from '../route';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 // Mock Firebase admin
 jest.mock('@/lib/firebase/admin', () => ({
@@ -9,7 +9,10 @@ jest.mock('@/lib/firebase/admin', () => ({
         verifyIdToken: jest.fn(),
         createSessionCookie: jest.fn(),
     },
+    isFirebaseInitialized: jest.fn(() => true),
 }));
+
+const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
 // Mock NextResponse and NextRequest
 jest.mock('next/server', () => {
@@ -61,6 +64,7 @@ describe('Session API Route - POST', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
 
         // Setup request with idToken
         const requestOptions = {
@@ -71,20 +75,20 @@ describe('Session API Route - POST', () => {
             body: JSON.stringify({ idToken: mockIdToken }),
         };
         mockRequest = new NextRequest('http://localhost:3000/api/auth/session', requestOptions);
-        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue(mockDecodedToken);
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockResolvedValue(mockDecodedToken);
     });
 
     describe('Successful session creation', () => {
         it('should create a session cookie and return success response', async () => {
             // Mock successful session cookie creation
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
 
-            expect(adminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
+            expect(mockAdminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
 
-            // Verify adminAuth.createSessionCookie was called with correct params
-            expect(adminAuth.createSessionCookie).toHaveBeenCalledWith(
+            // Verify mockAdminAuth.createSessionCookie was called with correct params
+            expect(mockAdminAuth.createSessionCookie).toHaveBeenCalledWith(
                 mockIdToken,
                 { expiresIn: 60 * 60 * 24 * 5 * 1000 }
             );
@@ -120,7 +124,7 @@ describe('Session API Route - POST', () => {
             const originalNodeEnv = process.env.NODE_ENV;
             setNodeEnv('production');
 
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
 
@@ -147,11 +151,11 @@ describe('Session API Route - POST', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/session', requestOptions);
 
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue('cookie-for-custom-token');
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue('cookie-for-custom-token');
 
             await POST(mockRequest);
 
-            expect(adminAuth.createSessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.createSessionCookie).toHaveBeenCalledWith(
                 customToken,
                 expect.any(Object)
             );
@@ -175,7 +179,7 @@ describe('Session API Route - POST', () => {
                 { error: 'ID token is required' },
                 { status: 400 }
             );
-            expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
         });
 
         it('should return 400 if idToken is null', async () => {
@@ -194,7 +198,7 @@ describe('Session API Route - POST', () => {
                 { error: 'ID token is required' },
                 { status: 400 }
             );
-            expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
         });
 
         it('should return 400 if idToken is empty string', async () => {
@@ -213,7 +217,7 @@ describe('Session API Route - POST', () => {
                 { error: 'ID token is required' },
                 { status: 400 }
             );
-            expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
         });
 
         it('should handle invalid JSON body', async () => {
@@ -240,7 +244,7 @@ describe('Session API Route - POST', () => {
 
         it('should handle Firebase auth errors', async () => {
             const errorMessage = 'Firebase: Invalid ID token';
-            (adminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -262,7 +266,7 @@ describe('Session API Route - POST', () => {
         });
 
         it('should handle non-Error exceptions', async () => {
-            (adminAuth.createSessionCookie as jest.Mock).mockRejectedValue('String error');
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockRejectedValue('String error');
 
             const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -286,7 +290,7 @@ describe('Session API Route - POST', () => {
         it('should set correct cookie options for development', async () => {
             setNodeEnv('development');
 
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
 
@@ -306,7 +310,7 @@ describe('Session API Route - POST', () => {
         it('should set secure cookie options for production', async () => {
             setNodeEnv('production');
 
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
 
@@ -324,7 +328,7 @@ describe('Session API Route - POST', () => {
         });
 
         it('should set correct maxAge based on expiresIn', async () => {
-            (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+            (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
 

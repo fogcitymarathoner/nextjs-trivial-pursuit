@@ -14,11 +14,21 @@ This is the standard pattern for using Firebase Auth with Next.js App Router,
 allowing you to use server-side authentication and protect routes with middleware.
 
  */
+
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase is initialized
+    if (!isFirebaseInitialized() || !adminAuth) {
+      console.error('Firebase Admin is not initialized. Check your credentials.');
+      return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+      );
+    }
+
     const { idToken } = await request.json();
 
     if (!idToken) {
@@ -28,8 +38,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // This will automatically create a user in Firebase Auth if they don't exist
-    // when they sign in with Google for the first time
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
