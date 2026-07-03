@@ -2,8 +2,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useRouter } from 'next/navigation';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { auth } from '@/lib/firebase/client';
+import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import LoginPage from '../page';
 
 // Mock next/navigation
@@ -15,6 +14,7 @@ jest.mock('next/navigation', () => ({
 jest.mock('firebase/auth', () => {
     const mockGoogleAuthProvider = jest.fn().mockImplementation(() => ({}));
     return {
+        getAuth: jest.fn().mockReturnValue({}),
         signInWithPopup: jest.fn(),
         GoogleAuthProvider: mockGoogleAuthProvider,
     };
@@ -22,7 +22,7 @@ jest.mock('firebase/auth', () => {
 
 // Mock firebase client
 jest.mock('@/lib/firebase/client', () => ({
-    auth: {},
+    app: {},
 }));
 
 // Mock fetch
@@ -33,6 +33,19 @@ describe('LoginPage', () => {
         push: jest.fn(),
         refresh: jest.fn(),
     };
+    const mockDelayedSuccessfulSignIn = () => {
+        const mockUser = {
+            getIdToken: jest.fn().mockResolvedValue('mock-id-token'),
+        };
+
+        (signInWithPopup as jest.Mock).mockImplementation(() =>
+            new Promise((resolve) => setTimeout(() => resolve({ user: mockUser }), 100))
+        );
+        (fetch as jest.Mock).mockResolvedValue({
+            ok: true,
+            json: jest.fn().mockResolvedValue({ success: true }),
+        });
+    };
 
     let mockGoogleAuthProvider: jest.Mock;
 
@@ -40,11 +53,10 @@ describe('LoginPage', () => {
         jest.clearAllMocks();
         (useRouter as jest.Mock).mockReturnValue(mockRouter);
 
-        // Get the mock from the module
-        const { GoogleAuthProvider } = require('firebase/auth');
-        mockGoogleAuthProvider = GoogleAuthProvider as jest.Mock;
+        mockGoogleAuthProvider = GoogleAuthProvider as unknown as jest.Mock;
         mockGoogleAuthProvider.mockClear();
         mockGoogleAuthProvider.mockImplementation(() => ({}));
+        (getAuth as jest.Mock).mockReturnValue({});
     });
 
     describe('Rendering', () => {
@@ -75,6 +87,8 @@ describe('LoginPage', () => {
         });
 
         it('should render button with "Signing in..." text when loading', () => {
+            (signInWithPopup as jest.Mock).mockImplementation(() => new Promise(() => undefined));
+
             render(<LoginPage />);
             const button = screen.getByText('Sign in with Google');
             fireEvent.click(button);
@@ -106,8 +120,8 @@ describe('LoginPage', () => {
         it('should have button with correct classes', () => {
             render(<LoginPage />);
             const button = screen.getByText('Sign in with Google');
-            expect(button).toHaveClass('group', 'relative', 'w-full', 'flex', 'justify-center');
-            expect(button).toHaveClass('bg-blue-600', 'hover:bg-blue-700');
+            expect(button).toHaveClass('w-full', 'flex', 'items-center', 'justify-center', 'gap-3');
+            expect(button).toHaveClass('border-gray-300', 'bg-white', 'hover:bg-gray-50', 'text-gray-700');
             expect(button).toHaveClass('disabled:opacity-50', 'disabled:cursor-not-allowed');
         });
 
@@ -119,7 +133,7 @@ describe('LoginPage', () => {
             fireEvent.click(button);
 
             await waitFor(() => {
-                const errorDiv = screen.getByText('Test error').closest('.rounded-md.bg-red-50.p-4');
+                const errorDiv = screen.getByText('Test error').closest('.rounded-md.bg-red-50.p-3');
                 expect(errorDiv).toBeInTheDocument();
             });
         });
@@ -199,9 +213,7 @@ describe('LoginPage', () => {
         });
 
         it('should set loading state during authentication', async () => {
-            (signInWithPopup as jest.Mock).mockImplementation(() =>
-                new Promise((resolve) => setTimeout(resolve, 100))
-            );
+            mockDelayedSuccessfulSignIn();
 
             render(<LoginPage />);
             const button = screen.getByText('Sign in with Google');
@@ -328,9 +340,7 @@ describe('LoginPage', () => {
 
     describe('Button states', () => {
         it('should disable button while loading', async () => {
-            (signInWithPopup as jest.Mock).mockImplementation(() =>
-                new Promise((resolve) => setTimeout(resolve, 100))
-            );
+            mockDelayedSuccessfulSignIn();
 
             render(<LoginPage />);
             const button = screen.getByText('Sign in with Google');
@@ -344,9 +354,7 @@ describe('LoginPage', () => {
         });
 
         it('should show loading text on button while loading', async () => {
-            (signInWithPopup as jest.Mock).mockImplementation(() =>
-                new Promise((resolve) => setTimeout(resolve, 100))
-            );
+            mockDelayedSuccessfulSignIn();
 
             render(<LoginPage />);
             const button = screen.getByText('Sign in with Google');
@@ -387,7 +395,7 @@ describe('LoginPage', () => {
             await waitFor(() => {
                 const error = screen.getByText('Test error');
                 expect(error).toBeInTheDocument();
-                expect(error).toHaveClass('text-sm', 'font-medium', 'text-red-800');
+                expect(error).toHaveClass('text-sm', 'text-red-600');
             });
         });
 
@@ -395,7 +403,7 @@ describe('LoginPage', () => {
             render(<LoginPage />);
             const svg = document.querySelector('svg');
             expect(svg).toBeInTheDocument();
-            expect(svg).toHaveClass('w-5', 'h-5', 'mr-2');
+            expect(svg).toHaveClass('w-5', 'h-5');
         });
     });
 

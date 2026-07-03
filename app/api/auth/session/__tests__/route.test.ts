@@ -6,6 +6,7 @@ import { adminAuth } from '@/lib/firebase/admin';
 // Mock Firebase admin
 jest.mock('@/lib/firebase/admin', () => ({
     adminAuth: {
+        verifyIdToken: jest.fn(),
         createSessionCookie: jest.fn(),
     },
 }));
@@ -48,6 +49,12 @@ describe('Session API Route - POST', () => {
     let mockRequest: NextRequest;
     const mockIdToken = 'mock-id-token-123';
     const mockSessionCookie = 'mock-session-cookie-xyz';
+    const mockDecodedToken = {
+        uid: 'mock-user-123',
+        email: 'test@example.com',
+        name: 'Test User',
+        picture: 'https://example.com/photo.jpg',
+    };
     const setNodeEnv = (value: string | undefined) => {
         (process.env as Record<string, string | undefined>).NODE_ENV = value;
     };
@@ -64,6 +71,7 @@ describe('Session API Route - POST', () => {
             body: JSON.stringify({ idToken: mockIdToken }),
         };
         mockRequest = new NextRequest('http://localhost:3000/api/auth/session', requestOptions);
+        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue(mockDecodedToken);
     });
 
     describe('Successful session creation', () => {
@@ -72,6 +80,8 @@ describe('Session API Route - POST', () => {
             (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
             const response = await POST(mockRequest);
+
+            expect(adminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
 
             // Verify adminAuth.createSessionCookie was called with correct params
             expect(adminAuth.createSessionCookie).toHaveBeenCalledWith(
@@ -83,6 +93,12 @@ describe('Session API Route - POST', () => {
             expect(NextResponse.json).toHaveBeenCalledWith({
                 success: true,
                 message: 'Session created successfully',
+                user: {
+                    uid: mockDecodedToken.uid,
+                    email: mockDecodedToken.email,
+                    displayName: mockDecodedToken.name,
+                    photoURL: mockDecodedToken.picture,
+                },
             });
 
             // Verify cookie was set
@@ -224,7 +240,7 @@ describe('Session API Route - POST', () => {
 
         it('should handle Firebase auth errors', async () => {
             const errorMessage = 'Firebase: Invalid ID token';
-            (adminAuth.createSessionCookie as jest.Mock).mockRejectedValue(
+            (adminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
