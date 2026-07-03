@@ -109,6 +109,12 @@ jobs:
               echo "❌ BUILD_ID file missing"
               exit 1
             fi
+            if [ -f ".next/standalone/server.js" ]; then
+              echo "✅ Standalone server exists"
+            else
+              echo "❌ .next/standalone/server.js missing"
+              exit 1
+            fi
           else
             echo "❌ .next directory does not exist"
             echo "Checking if build failed..."
@@ -121,11 +127,10 @@ jobs:
           name: nextjs-build
           include-hidden-files: true
           path: |
-            .next
-            node_modules
+            .next/standalone
+            .next/static
+            .next/BUILD_ID
             public
-            package.json
-            yarn.lock
           retention-days: 1
 
   deploy:
@@ -162,6 +167,12 @@ jobs:
               echo "❌ BUILD_ID file missing in downloaded artifacts"
               exit 1
             fi
+            if [ -f ".next/standalone/server.js" ]; then
+              echo "✅ Standalone server exists in downloaded artifacts"
+            else
+              echo "❌ .next/standalone/server.js missing in downloaded artifacts"
+              exit 1
+            fi
           else
             echo "❌ .next directory not found in downloaded artifacts"
             exit 1
@@ -176,12 +187,23 @@ jobs:
           ENV NEXT_TELEMETRY_DISABLED=1
           ENV PORT=3000
           ENV HOSTNAME="0.0.0.0"
-          COPY .next ./.next
+          COPY .next/standalone ./
+          COPY .next/static ./.next/static
           COPY public ./public
-          COPY package.json yarn.lock ./
-          COPY node_modules ./node_modules
           EXPOSE 3000
-          CMD ["yarn", "start"]
+          CMD ["node", "server.js"]
+          EOF
+
+          cat > .dockerignore << 'EOF'
+          *
+          !.next
+          !.next/standalone
+          !.next/standalone/**
+          !.next/static
+          !.next/static/**
+          !public
+          !public/**
+          !Dockerfile
           EOF
 
       - name: Google Cloud Auth
