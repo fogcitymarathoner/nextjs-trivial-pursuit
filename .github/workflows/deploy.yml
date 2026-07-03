@@ -67,9 +67,10 @@ jobs:
       - name: Build Next.js app
         run: yarn build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Required for build
+          NODE_ENV: production
+          NEXT_PHASE: phase-production-build
+          # Firebase config
           NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
           NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
@@ -79,23 +80,38 @@ jobs:
           NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: ${{ secrets.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL }}
           NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          # API Keys
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Other env vars
           CHAT_MODEL: gpt-4o-mini
           EMBEDDING_MODEL: text-embedding-3-large
           VECTOR_SIZE: 3072
           DEFAULT_THRESHOLD: 0.5
           PINECONE_INDEX_DEV: presidents-dev
           DEBUG: true
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
 
       # Verify build exists
       - name: Verify build
         run: |
-          if [ -d ".next" ] && [ -f ".next/BUILD_ID" ]; then
-            echo "✅ Build verified successfully"
-            echo "BUILD_ID: $(cat .next/BUILD_ID)"
+          echo "Contents of current directory:"
+          ls -la
+          echo ""
+          if [ -d ".next" ]; then
+            echo "✅ .next directory exists"
+            echo "Contents of .next:"
+            ls -la .next
+            if [ -f ".next/BUILD_ID" ]; then
+              echo "✅ BUILD_ID: $(cat .next/BUILD_ID)"
+            else
+              echo "❌ BUILD_ID file missing"
+              exit 1
+            fi
           else
-            echo "❌ Build failed - .next directory not found or BUILD_ID missing"
-            ls -la .next || echo ".next directory does not exist"
+            echo "❌ .next directory does not exist"
+            echo "Checking if build failed..."
             exit 1
           fi
 
@@ -132,12 +148,21 @@ jobs:
       - name: Verify downloaded artifacts
         run: |
           echo "Checking downloaded artifacts..."
-          if [ -d ".next" ] && [ -f ".next/BUILD_ID" ]; then
-            echo "✅ Build artifacts downloaded successfully"
-            echo "BUILD_ID: $(cat .next/BUILD_ID)"
+          echo "Contents of current directory:"
+          ls -la
+          echo ""
+          if [ -d ".next" ]; then
+            echo "✅ .next directory exists"
+            echo "Contents of .next:"
+            ls -la .next
+            if [ -f ".next/BUILD_ID" ]; then
+              echo "✅ BUILD_ID: $(cat .next/BUILD_ID)"
+            else
+              echo "❌ BUILD_ID file missing in downloaded artifacts"
+              exit 1
+            fi
           else
-            echo "❌ Build artifacts not found in .next directory"
-            ls -la .next || echo ".next directory does not exist"
+            echo "❌ .next directory not found in downloaded artifacts"
             exit 1
           fi
 
