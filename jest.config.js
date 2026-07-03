@@ -1,3 +1,7 @@
+const isFocusedTestRun = process.argv.some((arg) =>
+    /(__tests__|\.test\.|\.spec\.)/.test(arg)
+);
+
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'jsdom',
@@ -39,7 +43,7 @@ module.exports = {
     cacheDirectory: '<rootDir>/.jest-cache',
     testTimeout: 10000,
 
-    collectCoverage: true,
+    collectCoverage: !isFocusedTestRun,
     collectCoverageFrom: [
         "app/**/*.{ts,tsx}",
         "lib/**/*.{ts,tsx}",
@@ -60,7 +64,7 @@ module.exports = {
     coverageReporters: ["text", "text-summary", "lcov", "html"],
     coverageDirectory: "<rootDir>/coverage",
     coverageProvider: "v8",
-    coverageThreshold: {
+    coverageThreshold: isFocusedTestRun ? undefined : {
         global: {
             branches: 90,
             functions: 90,
