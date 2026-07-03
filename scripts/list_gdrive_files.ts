@@ -3,7 +3,7 @@
 // To run -- npx tsx .\scripts\list_gdrive_files.ts
 import {
   listAllFiles,
-  fileExists} from "@/lib/google_api_helpers";
+  fileExists} from "@/scripts/lib/google_api_helpers";
 
 
 

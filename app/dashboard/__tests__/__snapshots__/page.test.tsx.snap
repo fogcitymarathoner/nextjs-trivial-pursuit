@@ -1,0 +1,67 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`DashboardPage Snapshot should match snapshot when authenticated 1`] = `
+<div>
+  <div
+    class="min-h-screen bg-gray-100 p-8"
+  >
+    <div
+      class="max-w-4xl mx-auto"
+    >
+      <div
+        class="bg-white rounded-lg shadow-lg p-6"
+      >
+        <h1
+          class="text-3xl font-bold text-gray-900 mb-4"
+        >
+          Welcome to your Dashboard!
+        </h1>
+        <div
+          class="space-y-4"
+        >
+          <div
+            class="border-b border-gray-200 pb-4"
+          >
+            <p
+              class="text-sm text-gray-600"
+            >
+              Signed in as:
+            </p>
+            <p
+              class="text-lg font-semibold text-gray-900"
+            >
+              test@example.com
+            </p>
+          </div>
+          <div
+            class="border-b border-gray-200 pb-4"
+          >
+            <p
+              class="text-sm text-gray-600"
+            >
+              User ID:
+            </p>
+            <p
+              class="text-sm font-mono text-gray-700"
+            >
+              user-123
+            </p>
+          </div>
+          <div>
+            <p
+              class="text-sm text-gray-600"
+            >
+              Email verified:
+            </p>
+            <p
+              class="text-sm font-semibold"
+            >
+              ✅ Yes
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

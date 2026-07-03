@@ -1,0 +1,80 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SearchPage Snapshot should match snapshot 1`] = `
+<div>
+  <main
+    class="app-page"
+  >
+    <div
+      class="app-container"
+    >
+      <header
+        class="page-heading"
+      >
+        <h1
+          class="page-title"
+        >
+          Similarity Threshold
+        </h1>
+        <p
+          class="page-description"
+        >
+          Tune the minimum score required for document matches.
+        </p>
+      </header>
+      <section
+        class="surface-panel surface-panel-spacious surface-panel-compact content-stack"
+      >
+        <div
+          data-testid="mock-slider"
+        >
+          <span
+            data-testid="slider-label"
+          >
+            Similarity Threshold
+          </span>
+          <span
+            data-testid="slider-default"
+          >
+            0.5
+          </span>
+          <span
+            data-testid="slider-step"
+          >
+            0.01
+          </span>
+          <input
+            data-testid="slider-input"
+            max="1"
+            min="0"
+            step="0.01"
+            type="range"
+            value="0.5"
+          />
+        </div>
+        <div
+          class="surface-inner-item"
+        >
+          <p
+            class="body-copy"
+          >
+            Current threshold: 
+            0.5
+          </p>
+          <p
+            class="body-copy"
+          >
+            Will match results with similarity &gt;= 
+            0.5
+          </p>
+          <p
+            class="body-copy-muted"
+          >
+            Default: 0.5 (from environment or hardcoded)
+          </p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+`;
