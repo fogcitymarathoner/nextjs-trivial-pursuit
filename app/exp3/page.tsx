@@ -1,5 +1,5 @@
 'use client';
-
+// test harness for "use AI general knowledge" checkbox
 import { useState } from 'react';
 import { FallbackToGeneralKnowledgeCheckbox } from '@/components/fallback-to-general-knowledge-checkbox/FallbackToGeneralKnowledgeCheckbox';
 

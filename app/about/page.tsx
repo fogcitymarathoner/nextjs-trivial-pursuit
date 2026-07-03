@@ -32,6 +32,7 @@ const AboutPage = () => {
               <li>Approuter</li>
               <li>Pinecone</li>
               <li>3k vectors .5 similiarity threshold</li>
+              <li>Firebase (Google Authority) Authentication/Signup</li>
             </ul>
           </div>
         </section>

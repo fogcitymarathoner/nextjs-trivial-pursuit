@@ -1,4 +1,5 @@
 // app/api/test-env/route.ts
+// firebase diagnostic
 import { NextResponse } from 'next/server';
 import { NEXT_PUBLIC_FIREBASE_PROJECT_ID,
   NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,

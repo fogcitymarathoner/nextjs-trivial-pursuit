@@ -1,4 +1,18 @@
 // app/api/auth/login/route.ts
+/*
+This file is the primary login endpoint for your application. It:
+
+    Takes a Firebase ID token
+
+    Verifies it with Firebase Admin SDK
+
+    Creates a secure 5-day session cookie
+
+    Logs the user in for all future requests
+
+The session cookie created here is what your proxy.ts middleware checks to determine
+if a user is authenticated and can access protected routes.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 

@@ -1,4 +1,5 @@
 // app/api/test-init/route.ts
+// firebase diagnostic
 import { NextResponse } from 'next/server';
 import * as admin from 'firebase-admin';
 

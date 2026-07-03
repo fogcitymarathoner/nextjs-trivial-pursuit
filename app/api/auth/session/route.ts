@@ -1,4 +1,19 @@
 // app/api/auth/session/route.ts
+/*
+This file is the bridge between Firebase authentication and your Next.js app's session management. It:
+
+    Takes a Firebase ID token
+
+    Verifies it
+
+    Creates a secure session cookie
+
+    Makes the user authenticated for future requests
+
+This is the standard pattern for using Firebase Auth with Next.js App Router,
+allowing you to use server-side authentication and protect routes with middleware.
+
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth } from '@/lib/firebase/admin';
 

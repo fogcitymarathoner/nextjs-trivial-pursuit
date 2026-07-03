@@ -1,3 +1,5 @@
+// test harness for pinecone index selection dropdown
+
 import { IndexSelector } from '@/components/pinecone/IndexSelector';
 import { PINECONE_INDEXES } from '@/config/pinecone/pinecone_indexes';
 
