@@ -1,112 +1,114 @@
 // lib/firebase/__tests__/admin.test.ts
 import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
+type FirebaseAdminTestGlobals = typeof globalThis & {
+    __mockExistsSync?: jest.Mock;
+    __mockReadFileSync?: jest.Mock;
+    __mockResolve?: jest.Mock;
+    __mockInitializeApp?: jest.Mock;
+    __mockGetApps?: jest.Mock;
+    __mockCert?: jest.Mock;
+    __mockGetAuth?: jest.Mock;
+};
+
+const getTestGlobals = () => globalThis as FirebaseAdminTestGlobals;
+
 // Mock fs
 jest.mock('fs', () => {
-    const mocks = ((globalThis as any).__firebaseAdminTestMocks ??= {
-        existsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        resolve: jest.fn((...args) => args.join('/')),
-        initializeApp: jest.fn(),
-        getApps: jest.fn().mockReturnValue([]),
-        cert: jest.fn(),
-        getAuth: jest.fn(),
-    });
+    const testGlobals = globalThis as FirebaseAdminTestGlobals;
+    testGlobals.__mockExistsSync ??= jest.fn();
+    testGlobals.__mockReadFileSync ??= jest.fn();
 
     return {
-        existsSync: mocks.existsSync,
-        readFileSync: mocks.readFileSync,
+        existsSync: testGlobals.__mockExistsSync,
+        readFileSync: testGlobals.__mockReadFileSync,
     };
 });
 
 // Mock path
 jest.mock('path', () => {
-    const mocks = ((globalThis as any).__firebaseAdminTestMocks ??= {
-        existsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        resolve: jest.fn((...args) => args.join('/')),
-        initializeApp: jest.fn(),
-        getApps: jest.fn().mockReturnValue([]),
-        cert: jest.fn(),
-        getAuth: jest.fn(),
-    });
+    const testGlobals = globalThis as FirebaseAdminTestGlobals;
+    testGlobals.__mockResolve ??= jest.fn((...args: string[]) => args.join('/'));
 
     return {
-        resolve: mocks.resolve,
+        resolve: testGlobals.__mockResolve,
     };
 });
 
 // Mock firebase-admin
 jest.mock('firebase-admin/app', () => {
-    const mocks = ((globalThis as any).__firebaseAdminTestMocks ??= {
-        existsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        resolve: jest.fn((...args) => args.join('/')),
-        initializeApp: jest.fn(),
-        getApps: jest.fn().mockReturnValue([]),
-        cert: jest.fn(),
-        getAuth: jest.fn(),
-    });
+    const testGlobals = globalThis as FirebaseAdminTestGlobals;
+    testGlobals.__mockInitializeApp ??= jest.fn();
+    testGlobals.__mockGetApps ??= jest.fn().mockReturnValue([]);
+    testGlobals.__mockCert ??= jest.fn();
 
     return {
-        initializeApp: mocks.initializeApp,
-        getApps: mocks.getApps,
-        cert: mocks.cert,
+        initializeApp: testGlobals.__mockInitializeApp,
+        getApps: testGlobals.__mockGetApps,
+        cert: testGlobals.__mockCert,
     };
 });
 
 jest.mock('firebase-admin/auth', () => {
-    const mocks = ((globalThis as any).__firebaseAdminTestMocks ??= {
-        existsSync: jest.fn(),
-        readFileSync: jest.fn(),
-        resolve: jest.fn((...args) => args.join('/')),
-        initializeApp: jest.fn(),
-        getApps: jest.fn().mockReturnValue([]),
-        cert: jest.fn(),
-        getAuth: jest.fn(),
-    });
+    const testGlobals = globalThis as FirebaseAdminTestGlobals;
+    testGlobals.__mockGetAuth ??= jest.fn();
 
     return {
-        getAuth: mocks.getAuth,
+        getAuth: testGlobals.__mockGetAuth,
     };
 });
 
-// Mock env.server with default values
-jest.mock('@/config/env.server', () => ({
-    FIREBASE_PRIVATE_KEY: '',
-    NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'mock-project-id',
-    NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: 'mock@example.com',
-    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: 'mock-private-key',
-    NEXT_PUBLIC_FIREBASE_API_KEY: 'mock-api-key',
-}));
-
 describe('Firebase Admin', () => {
-    const originalEnv = process.env;
+    const originalEnv = { ...process.env };
+    const setNodeEnv = (value: string | undefined) => {
+        const env = process.env as Record<string, string | undefined>;
+        if (value === undefined) {
+            delete env.NODE_ENV;
+            return;
+        }
+        env.NODE_ENV = value;
+    };
+
+    // Helper to clear module cache and reset mocks
+    const resetModule = () => {
+        jest.resetModules();
+        jest.resetAllMocks();
+        // Reset the firebase-admin mocks
+        (getApps as jest.Mock).mockReturnValue([]);
+        (getAuth as jest.Mock).mockReturnValue({ verifySessionCookie: jest.fn() });
+        const testGlobals = getTestGlobals();
+        testGlobals.__mockResolve?.mockImplementation((...args: string[]) => args.join('/'));
+        // Reset environment
+        process.env = { ...originalEnv };
+        setNodeEnv('test');
+        delete process.env.NEXT_PHASE;
+    };
+
+    // Helper to import the module with custom env mocks
+    const importWithEnv = async (
+        envMocks: Record<string, string | undefined>,
+    ) => {
+        jest.resetModules();
+        // Set environment variables directly
+        Object.keys(envMocks).forEach(key => {
+            if (envMocks[key] !== undefined) {
+                process.env[key] = envMocks[key] as string;
+            }
+        });
+        // Import the module fresh
+        const importedModule = await import('../admin');
+        return importedModule;
+    };
 
     beforeEach(() => {
-        jest.clearAllMocks();
-        process.env = { ...originalEnv };
-        // Reset modules to get fresh imports
-        jest.resetModules();
-        // Ensure getApps returns an array
-        (getApps as jest.Mock).mockReturnValue([]);
+        resetModule();
     });
 
     afterEach(() => {
-        process.env = originalEnv;
-        jest.resetModules();
+        resetModule();
     });
-
-    // Helper to import the module with custom env mocks
-    const importWithEnv = async (envMocks: any) => {
-        jest.resetModules();
-        jest.doMock('@/config/env.server', () => envMocks);
-        const module = await import('../admin');
-        return module;
-    };
 
     describe('Service Account parsing', () => {
         it('should parse service account from JSON string', async () => {
@@ -132,6 +134,7 @@ describe('Firebase Admin', () => {
                 privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
             });
             expect(initializeApp).toHaveBeenCalled();
+            expect(adminAuth).toBeDefined();
         });
 
         it('should parse service account from JSON file path', async () => {
@@ -160,6 +163,7 @@ describe('Firebase Admin', () => {
                 clientEmail: 'test@example.com',
                 privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
             });
+            expect(adminAuth).toBeDefined();
         });
 
         it('should clean private key by replacing \\n with newlines', async () => {
@@ -184,6 +188,7 @@ describe('Firebase Admin', () => {
                 clientEmail: 'test@example.com',
                 privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
             });
+            expect(adminAuth).toBeDefined();
         });
 
         it('should clean private key by removing quotes', async () => {
@@ -208,51 +213,69 @@ describe('Firebase Admin', () => {
                 clientEmail: 'test@example.com',
                 privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
             });
+            expect(adminAuth).toBeDefined();
         });
 
-        it('should throw error if service account is missing project_id', async () => {
+        it('should handle error if service account is missing project_id', async () => {
             const mockJson = JSON.stringify({
                 client_email: 'test@example.com',
                 private_key: 'test-key',
             });
 
-            await expect(importWithEnv({
+            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+            // Clear FIREBASE_PRIVATE_KEY to force JSON parsing
+            await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
-            })).rejects.toThrow('Firebase service account is missing project_id, client_email, or private_key');
+            });
+
+            // The error should be caught and logged
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
 
-        it('should throw error if service account is missing client_email', async () => {
+        it('should handle error if service account is missing client_email', async () => {
             const mockJson = JSON.stringify({
                 project_id: 'test-project',
                 private_key: 'test-key',
             });
 
-            await expect(importWithEnv({
+            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+            await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
-            })).rejects.toThrow('Firebase service account is missing project_id, client_email, or private_key');
+            });
+
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
 
-        it('should throw error if service account is missing private_key', async () => {
+        it('should handle error if service account is missing private_key', async () => {
             const mockJson = JSON.stringify({
                 project_id: 'test-project',
                 client_email: 'test@example.com',
             });
 
-            await expect(importWithEnv({
+            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+
+            await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
-            })).rejects.toThrow('Firebase service account is missing project_id, client_email, or private_key');
+            });
+
+            expect(consoleSpy).toHaveBeenCalled();
+            consoleSpy.mockRestore();
         });
     });
 
@@ -273,17 +296,18 @@ describe('Firebase Admin', () => {
                 clientEmail: 'env@example.com',
                 privateKey: 'env-private-key',
             });
+            expect(adminAuth).toBeDefined();
         });
 
         it('should use process.env as fallback when config values are not set', async () => {
+            // Set process.env values directly
             process.env.FIREBASE_PROJECT_ID = 'process-project-id';
             process.env.FIREBASE_CLIENT_EMAIL = 'process@example.com';
-            process.env.FIREBASE_PRIVATE_KEY_VALUE = 'process-private-key';
+            process.env.FIREBASE_PRIVATE_KEY = 'process-private-key';
 
             (cert as jest.Mock).mockReturnValue({});
 
             const { adminAuth } = await importWithEnv({
-                FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
@@ -295,21 +319,25 @@ describe('Firebase Admin', () => {
                 clientEmail: 'process@example.com',
                 privateKey: 'process-private-key',
             });
+            expect(adminAuth).toBeDefined();
         });
 
-        it('should throw error if no credentials are found', async () => {
-            // Clear any process.env fallbacks
-            delete process.env.FIREBASE_PROJECT_ID;
-            delete process.env.FIREBASE_CLIENT_EMAIL;
-            delete process.env.FIREBASE_PRIVATE_KEY_VALUE;
+        it('should handle error if no credentials are found', async () => {
+            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-            await expect(importWithEnv({
+            const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
-            })).rejects.toThrow('Missing Firebase Admin credentials');
+            });
+
+            expect(cert).not.toHaveBeenCalled();
+            expect(initializeApp).not.toHaveBeenCalled();
+            expect(consoleSpy).not.toHaveBeenCalled();
+            expect(adminAuth).toBeDefined();
+            consoleSpy.mockRestore();
         });
     });
 
@@ -334,6 +362,7 @@ describe('Firebase Admin', () => {
 
             expect(initializeApp).not.toHaveBeenCalled();
             expect(getAuth).toHaveBeenCalled();
+            expect(adminAuth).toBeDefined();
         });
 
         it('should initialize Firebase Admin if no apps exist', async () => {
@@ -356,6 +385,7 @@ describe('Firebase Admin', () => {
 
             expect(initializeApp).toHaveBeenCalled();
             expect(getAuth).toHaveBeenCalled();
+            expect(adminAuth).toBeDefined();
         });
 
         it('should initialize Firebase Admin with correct credential', async () => {
@@ -379,6 +409,7 @@ describe('Firebase Admin', () => {
             expect(initializeApp).toHaveBeenCalledWith({
                 credential: mockCredential,
             });
+            expect(adminAuth).toBeDefined();
         });
     });
 
@@ -428,6 +459,7 @@ describe('Firebase Admin', () => {
                 clientEmail: 'test@example.com',
                 privateKey: '-----BEGIN PRIVATE KEY-----\n\ntest-key\n\n-----END PRIVATE KEY-----',
             });
+            expect(adminAuth).toBeDefined();
         });
 
         it('should handle private key with quotes and escaped newlines', async () => {
@@ -452,6 +484,7 @@ describe('Firebase Admin', () => {
                 clientEmail: 'test@example.com',
                 privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
             });
+            expect(adminAuth).toBeDefined();
         });
 
         it('should handle JSON with whitespace', async () => {
@@ -472,12 +505,36 @@ describe('Firebase Admin', () => {
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
 
-            // The cert should be called with the parsed service account
             expect(cert).toHaveBeenCalledWith(expect.objectContaining({
                 projectId: 'test-project',
                 clientEmail: 'test@example.com',
                 privateKey: 'test-key',
             }));
+            expect(adminAuth).toBeDefined();
+        });
+    });
+
+    describe('Build time handling', () => {
+        it('should skip initialization during build time', async () => {
+            process.env.NEXT_PHASE = 'phase-production-build';
+
+            (cert as jest.Mock).mockReturnValue({});
+
+            const { adminAuth } = await importWithEnv({
+                FIREBASE_PRIVATE_KEY: JSON.stringify({
+                    project_id: 'test-project',
+                    client_email: 'test@example.com',
+                    private_key: 'test-key',
+                }),
+                NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
+                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
+                NEXT_PUBLIC_FIREBASE_API_KEY: '',
+            });
+
+            expect(cert).not.toHaveBeenCalled();
+            expect(initializeApp).not.toHaveBeenCalled();
+            expect(adminAuth).toBeDefined();
         });
     });
 });

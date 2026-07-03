@@ -1,7 +1,7 @@
 // lib/firebase/admin.ts
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 // Check if we're in a build environment
@@ -31,13 +31,29 @@ if (!getApps().length && hasCredentials() && !isBuildTime) {
       const serviceAccountJsonOrPath = process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
       if (serviceAccountJsonOrPath) {
+        let parsed: Record<string, string> | undefined;
+
         if (serviceAccountJsonOrPath.trim().startsWith('{')) {
-          const parsed = JSON.parse(serviceAccountJsonOrPath);
-          return {
+          parsed = JSON.parse(serviceAccountJsonOrPath);
+        } else {
+          const serviceAccountPath = resolve(process.cwd(), serviceAccountJsonOrPath);
+          if (existsSync(serviceAccountPath)) {
+            parsed = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+          }
+        }
+
+        if (parsed) {
+          const serviceAccount = {
             projectId: parsed.project_id || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
             clientEmail: parsed.client_email || process.env.FIREBASE_CLIENT_EMAIL || process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
-            privateKey: cleanPrivateKey(parsed.private_key),
+            privateKey: parsed.private_key ? cleanPrivateKey(parsed.private_key) : undefined,
           };
+
+          if (!serviceAccount.projectId || !serviceAccount.clientEmail || !serviceAccount.privateKey) {
+            throw new Error('Missing Firebase Admin credentials');
+          }
+
+          return serviceAccount;
         }
       }
 
