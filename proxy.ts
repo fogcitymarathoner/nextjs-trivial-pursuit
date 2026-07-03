@@ -1,4 +1,4 @@
-// middleware.ts
+// proxy.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const publicPaths = ['/login', '/signup', '/'];
@@ -26,12 +26,12 @@ const isAuthenticatedRequest = async (request: NextRequest) => {
 
     return response.ok;
   } catch (error) {
-    console.error('Middleware session verification error:', error);
+    console.error('Proxy session verification error:', error);
     return false;
   }
 };
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const authenticated = await isAuthenticatedRequest(request);
 
