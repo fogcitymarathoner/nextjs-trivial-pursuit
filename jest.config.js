@@ -55,8 +55,7 @@ module.exports = {
         "!**/*.spec.tsx",
         "!**/*.d.ts",
         "!**/node_modules/**",
-        "!**/tmp/**",
-        '!**/fb_config.ts'
+        "!**/tmp/**"
     ],
     coverageReporters: ["text", "text-summary", "lcov", "html"],
     coverageDirectory: "<rootDir>/coverage",

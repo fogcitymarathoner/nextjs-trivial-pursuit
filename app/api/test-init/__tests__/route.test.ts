@@ -13,8 +13,12 @@ jest.mock('next/server', () => ({
     },
 }));
 
+type MockFirebaseApp = {
+    name: string;
+};
+
 // Create a mutable array that can be accessed from the mock
-const mockApps: any[] = [];
+const mockApps: MockFirebaseApp[] = [];
 
 // Mock firebase-admin - use a getter to return the current mockApps
 jest.mock('firebase-admin', () => ({
@@ -27,8 +31,32 @@ jest.mock('firebase-admin', () => ({
 // Import the route after mocks are set up
 import { GET } from '../route';
 
+type TestInitResponseBody = {
+    initialized: boolean;
+    appsCount: number;
+    envCheck: {
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: string;
+        NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: string;
+        NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: string;
+    };
+    nodeEnv: string | undefined;
+};
+
+type MockJsonResponse<T> = {
+    body: T;
+    status: number;
+};
+
 describe('Test Init API Route - GET', () => {
     const originalEnv = process.env;
+    const setNodeEnv = (value: string | undefined) => {
+        const env = process.env as Record<string, string | undefined>;
+        if (value === undefined) {
+            delete env.NODE_ENV;
+            return;
+        }
+        env.NODE_ENV = value;
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -48,7 +76,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             // Simulate Firebase initialized
             mockApps.push({ name: '[DEFAULT]' });
@@ -72,7 +100,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             // Ensure mockApps is empty (not initialized)
             mockApps.length = 0;
@@ -98,7 +126,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'production';
+            setNodeEnv('production');
 
             mockApps.push({ name: '[DEFAULT]' });
 
@@ -121,7 +149,7 @@ describe('Test Init API Route - GET', () => {
             delete process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
             delete process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
             delete process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
-            process.env.NODE_ENV = 'development';
+            setNodeEnv('development');
 
             mockApps.push({ name: '[DEFAULT]' });
 
@@ -144,7 +172,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = '';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = '';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = '';
-            process.env.NODE_ENV = 'staging';
+            setNodeEnv('staging');
 
             mockApps.push({ name: '[DEFAULT]' });
 
@@ -167,7 +195,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             delete process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             mockApps.push({ name: '[DEFAULT]' });
 
@@ -192,7 +220,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             // Simulate multiple apps initialized
             mockApps.push({ name: '[DEFAULT]' });
@@ -217,7 +245,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             mockApps.length = 0;
 
@@ -242,7 +270,7 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'production';
+            setNodeEnv('production');
 
             mockApps.push({ name: '[DEFAULT]' });
 
@@ -262,7 +290,7 @@ describe('Test Init API Route - GET', () => {
 
         it('should handle undefined NODE_ENV', async () => {
             // Delete NODE_ENV to simulate undefined
-            delete process.env.NODE_ENV;
+            setNodeEnv(undefined);
 
             // Set other environment variables
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
@@ -292,11 +320,11 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             mockApps.push({ name: '[DEFAULT]' });
 
-            const response = await GET();
+            const response = await GET() as unknown as MockJsonResponse<TestInitResponseBody>;
 
             expect(response.status).toBe(200);
             expect(response.body).toEqual({
@@ -316,11 +344,11 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             mockApps.push({ name: '[DEFAULT]' });
 
-            const response = await GET();
+            const response = await GET() as unknown as MockJsonResponse<TestInitResponseBody>;
 
             const expectedKeys = [
                 'initialized',
@@ -337,11 +365,11 @@ describe('Test Init API Route - GET', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project';
             process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL = 'mock@example.com';
             process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY = 'mock-private-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
             mockApps.push({ name: '[DEFAULT]' });
 
-            const response = await GET();
+            const response = await GET() as unknown as MockJsonResponse<TestInitResponseBody>;
 
             const expectedEnvKeys = [
                 'NEXT_PUBLIC_FIREBASE_PROJECT_ID',

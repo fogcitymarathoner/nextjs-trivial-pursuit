@@ -25,4 +25,3 @@ next-env.d.ts
 data/
 package-lock.json
 snapshots/
-lib/firebase/fb_config.ts

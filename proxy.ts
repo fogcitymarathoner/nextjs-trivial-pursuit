@@ -5,9 +5,14 @@ const publicPaths = ['/login', '/signup', '/'];
 
 const isPublicPath = (path: string) => {
   return publicPaths.includes(path) ||
-    path.startsWith('/_next') ||
-    path.startsWith('/static') ||
-    path.startsWith('/api/auth');
+      path.startsWith('/about') ||
+      path.startsWith('/marc') ||
+      path.startsWith('/exp') ||
+      path.startsWith('/exp2') ||
+      path.startsWith('/exp3') ||
+      path.startsWith('/_next') ||
+      path.startsWith('/static') ||
+      path.startsWith('/api/auth');
 };
 
 const isAuthenticatedRequest = async (request: NextRequest) => {

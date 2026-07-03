@@ -20,26 +20,49 @@ const defaultEnvMocks = {
     NEXT_PUBLIC_FIREBASE_API_KEY: 'mock-api-key',
 };
 
-// Helper to get route with specific env mocks using require
-const getRouteWithEnv = (envMocks: any) => {
-    // Clear the require cache for the env.server module
-    const modulePath = require.resolve('@/config/env.server');
-    delete require.cache[modulePath];
+type EnvServerMock = {
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: string | undefined;
+    NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: string | undefined;
+    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: string | undefined;
+    NEXT_PUBLIC_FIREBASE_API_KEY: string | undefined;
+};
 
-    // Set up the mock
+type TestEnvResponseBody = {
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID: string;
+    NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: string;
+    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: string;
+    NEXT_PUBLIC_FIREBASE_API_KEY: string;
+    COOKIE_SIGNATURE_KEY: string;
+    NODE_ENV: string | undefined;
+};
+
+type MockJsonResponse<T> = {
+    body: T;
+    status: number;
+    statusText: string;
+    headers: Headers;
+};
+
+type GetHandler = () => Promise<MockJsonResponse<TestEnvResponseBody>>;
+
+const getRouteWithEnv = async (envMocks: EnvServerMock): Promise<GetHandler> => {
+    jest.resetModules();
     jest.doMock('@/config/env.server', () => envMocks);
 
-    // Clear and re-require the route
-    const routePath = require.resolve('../route');
-    delete require.cache[routePath];
-
-    // Re-import with the new mocks
-    const { GET } = require('../route');
-    return GET;
+    const route = await import('../route');
+    return route.GET as unknown as GetHandler;
 };
 
 describe('Test Env API Route - GET', () => {
     const originalEnv = process.env;
+    const setNodeEnv = (value: string | undefined) => {
+        const env = process.env as Record<string, string | undefined>;
+        if (value === undefined) {
+            delete env.NODE_ENV;
+            return;
+        }
+        env.NODE_ENV = value;
+    };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -58,9 +81,9 @@ describe('Test Env API Route - GET', () => {
         it('should return environment variable status checks', async () => {
             const testKey = 'mock-signature-key-12345';
             process.env.COOKIE_SIGNATURE_KEY = testKey;
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body).toEqual({
@@ -75,9 +98,9 @@ describe('Test Env API Route - GET', () => {
 
         it('should show ❌ for missing Firebase environment variables', async () => {
             process.env.COOKIE_SIGNATURE_KEY = 'test-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv({
+            const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: undefined,
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: undefined,
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: undefined,
@@ -98,9 +121,9 @@ describe('Test Env API Route - GET', () => {
 
         it('should show ❌ for missing COOKIE_SIGNATURE_KEY', async () => {
             delete process.env.COOKIE_SIGNATURE_KEY;
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body).toEqual({
@@ -116,9 +139,9 @@ describe('Test Env API Route - GET', () => {
         it('should show character count for COOKIE_SIGNATURE_KEY', async () => {
             const testKey = 'test-key-12345';
             process.env.COOKIE_SIGNATURE_KEY = testKey;
-            process.env.NODE_ENV = 'development';
+            setNodeEnv('development');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body).toEqual({
@@ -134,9 +157,9 @@ describe('Test Env API Route - GET', () => {
         it('should handle COOKIE_SIGNATURE_KEY with different lengths', async () => {
             const testKey = 'short';
             process.env.COOKIE_SIGNATURE_KEY = testKey;
-            process.env.NODE_ENV = 'production';
+            setNodeEnv('production');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body).toEqual({
@@ -152,9 +175,9 @@ describe('Test Env API Route - GET', () => {
         it('should handle COOKIE_SIGNATURE_KEY with special characters', async () => {
             const testKey = '!@#$%^&*()_+-=';
             process.env.COOKIE_SIGNATURE_KEY = testKey;
-            process.env.NODE_ENV = 'staging';
+            setNodeEnv('staging');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body).toEqual({
@@ -171,9 +194,9 @@ describe('Test Env API Route - GET', () => {
     describe('Environment variable combinations', () => {
         it('should handle mixed presence of environment variables', async () => {
             process.env.COOKIE_SIGNATURE_KEY = 'mock-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv({
+            const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'mock-project-id',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: undefined,
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: 'mock-private-key',
@@ -194,9 +217,9 @@ describe('Test Env API Route - GET', () => {
 
         it('should handle empty string values as missing', async () => {
             process.env.COOKIE_SIGNATURE_KEY = '';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv({
+            const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
@@ -219,9 +242,9 @@ describe('Test Env API Route - GET', () => {
     describe('Response structure', () => {
         it('should return JSON response with status 200', async () => {
             process.env.COOKIE_SIGNATURE_KEY = 'test-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.status).toBe(200);
@@ -237,9 +260,9 @@ describe('Test Env API Route - GET', () => {
 
         it('should include all expected keys in response', async () => {
             process.env.COOKIE_SIGNATURE_KEY = 'test-key';
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             const expectedKeys = [
@@ -258,29 +281,30 @@ describe('Test Env API Route - GET', () => {
     describe('Edge cases', () => {
         it('should handle undefined COOKIE_SIGNATURE_KEY correctly', async () => {
             delete process.env.COOKIE_SIGNATURE_KEY;
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body.COOKIE_SIGNATURE_KEY).toBe('❌ MISSING');
         });
 
         it('should handle null COOKIE_SIGNATURE_KEY correctly', async () => {
-            process.env.COOKIE_SIGNATURE_KEY = null as any;
-            process.env.NODE_ENV = 'test';
+            const env = process.env as Record<string, string | null | undefined>;
+            env.COOKIE_SIGNATURE_KEY = null;
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body.COOKIE_SIGNATURE_KEY).toBe('❌ MISSING');
         });
 
         it('should handle number values in COOKIE_SIGNATURE_KEY', async () => {
-            process.env.COOKIE_SIGNATURE_KEY = '12345' as any;
-            process.env.NODE_ENV = 'test';
+            process.env.COOKIE_SIGNATURE_KEY = '12345';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body.COOKIE_SIGNATURE_KEY).toBe('✅ (5 chars)');
@@ -289,9 +313,9 @@ describe('Test Env API Route - GET', () => {
         it('should handle very long COOKIE_SIGNATURE_KEY', async () => {
             const longKey = 'a'.repeat(1000);
             process.env.COOKIE_SIGNATURE_KEY = longKey;
-            process.env.NODE_ENV = 'test';
+            setNodeEnv('test');
 
-            const GET = getRouteWithEnv(defaultEnvMocks);
+            const GET = await getRouteWithEnv(defaultEnvMocks);
             const response = await GET();
 
             expect(response.body.COOKIE_SIGNATURE_KEY).toBe(`✅ (${longKey.length} chars)`);
