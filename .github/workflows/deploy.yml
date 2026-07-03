@@ -27,7 +27,6 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      # STEP 1: Debug - Check if secrets are set
       - name: Debug - Check if secrets are set
         run: |
           echo "=========================================="
@@ -88,6 +87,18 @@ jobs:
           PINECONE_INDEX_DEV: presidents-dev
           DEBUG: true
 
+      # Verify build exists
+      - name: Verify build
+        run: |
+          if [ -d ".next" ] && [ -f ".next/BUILD_ID" ]; then
+            echo "✅ Build verified successfully"
+            echo "BUILD_ID: $(cat .next/BUILD_ID)"
+          else
+            echo "❌ Build failed - .next directory not found or BUILD_ID missing"
+            ls -la .next || echo ".next directory does not exist"
+            exit 1
+          fi
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -117,9 +128,35 @@ jobs:
           name: nextjs-build
           path: .
 
-      - name: Create Procfile
+      # Verify downloaded artifacts
+      - name: Verify downloaded artifacts
         run: |
-          echo "web: yarn start" > Procfile
+          echo "Checking downloaded artifacts..."
+          if [ -d ".next" ] && [ -f ".next/BUILD_ID" ]; then
+            echo "✅ Build artifacts downloaded successfully"
+            echo "BUILD_ID: $(cat .next/BUILD_ID)"
+          else
+            echo "❌ Build artifacts not found in .next directory"
+            ls -la .next || echo ".next directory does not exist"
+            exit 1
+          fi
+
+      - name: Create Dockerfile
+        run: |
+          cat > Dockerfile << 'EOF'
+          FROM node:20-slim
+          WORKDIR /app
+          ENV NODE_ENV=production
+          ENV NEXT_TELEMETRY_DISABLED=1
+          ENV PORT=3000
+          ENV HOSTNAME="0.0.0.0"
+          COPY .next ./.next
+          COPY public ./public
+          COPY package.json yarn.lock ./
+          COPY node_modules ./node_modules
+          EXPOSE 3000
+          CMD ["yarn", "start"]
+          EOF
 
       - name: Google Cloud Auth
         uses: google-github-actions/auth@v2
@@ -130,10 +167,18 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Build and push Docker image
+        run: |
+          # Build the Docker image locally and push to Artifact Registry
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+
       - name: Deploy to Cloud Run
         run: |
+          IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --source . \
+            --image $IMAGE_URI \
             --platform managed \
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
