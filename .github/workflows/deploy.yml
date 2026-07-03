@@ -119,6 +119,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nextjs-build
+          include-hidden-files: true
           path: |
             .next
             node_modules
