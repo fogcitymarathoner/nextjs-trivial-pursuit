@@ -215,16 +215,26 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+          echo "✅ Docker configured for Artifact Registry"
+
       - name: Build and push Docker image
         run: |
           # Build the Docker image locally and push to Artifact Registry
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
+          echo "✅ Docker image built successfully"
+          echo "Pushing image: $IMAGE_URI"
           docker push $IMAGE_URI
+          echo "✅ Docker image pushed successfully"
 
       - name: Deploy to Cloud Run
         run: |
           IMAGE_URI="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE_NAME }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          echo "Deploying image: $IMAGE_URI"
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image $IMAGE_URI \
             --platform managed \
@@ -247,3 +257,4 @@ jobs:
               NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }},\
               NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }},\
               NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}"
+          echo "✅ Deployment complete!"
