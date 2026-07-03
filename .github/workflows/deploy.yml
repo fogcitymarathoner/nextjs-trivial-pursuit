@@ -4,25 +4,14 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: nextjs-app
   REGION: us-central1
-  IMAGE_NAME: nextjs-app
-  NODE_ENV: test
-  CHAT_MODEL: gpt-4o-mini
-  EMBEDDING_MODEL: text-embedding-3-large
-  VECTOR_SIZE: 3072
-  DEFAULT_THRESHOLD: 0.5
-  PINECONE_INDEX_DEV: presidents-dev
-  DEBUG: true
-  DOCKER_BUILDKIT: 1
-  COMPOSE_DOCKER_CLI_BUILD: 1
 
 jobs:
-  # RECOMMENDATION: Combined build and test job to avoid duplication
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -38,23 +27,20 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Run ALL tests with coverage
+      - name: Run tests
         run: yarn test --coverage
         env:
           NODE_ENV: test
           CI: true
-          # IMPORTANT: Unset DEFAULT_THRESHOLD for tests to ensure consistent behavior
           DEFAULT_THRESHOLD: ''
           PINECONE_API_KEY: xxxxxxxx
           PINECONE_INDEX: presidents
           CLIENT_SECRET_FILE: xxxxxxx
           CLIENT_SECRET_FILE_FOGCITYMARATHONER_LIST_FILES_2: XXXXXXX
 
-      # RECOMMENDATION: Build the app once here, not in deploy job
       - name: Build Next.js app
         run: yarn build
         env:
-          # ✅ Pass ALL required environment variables for build
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -68,8 +54,6 @@ jobs:
           NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
-          # Add any other secrets your build needs
           CHAT_MODEL: gpt-4o-mini
           EMBEDDING_MODEL: text-embedding-3-large
           VECTOR_SIZE: 3072
@@ -77,7 +61,6 @@ jobs:
           PINECONE_INDEX_DEV: presidents-dev
           DEBUG: true
 
-      # RECOMMENDATION: Save build artifacts to reuse in deploy job
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -90,19 +73,8 @@ jobs:
             yarn.lock
           retention-days: 1
 
-      # RECOMMENDATION: Also save test results for reporting
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            coverage
-            test-results
-          retention-days: 7
-        if: always()
-
   deploy:
-    needs: build-and-test  # RECOMMENDATION: Only deploy if build and tests pass
+    needs: build-and-test
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
@@ -112,23 +84,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # RECOMMENDATION: Download pre-built artifacts instead of rebuilding
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
           name: nextjs-build
           path: .
 
-      - name: Set up Docker BuildKit
+      - name: Create Procfile
         run: |
-          echo "DOCKER_BUILDKIT=1" >> $GITHUB_ENV
-          echo "COMPOSE_DOCKER_CLI_BUILD=1" >> $GITHUB_ENV
-
-      - name: Verify BuildKit
-        run: |
-          docker version
-          docker buildx version
-          echo "DOCKER_BUILDKIT=${DOCKER_BUILDKIT}"
+          echo "web: yarn start" > Procfile
 
       - name: Google Cloud Auth
         uses: google-github-actions/auth@v2
@@ -139,90 +103,27 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
-        run: |
-          gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
-
-      # RECOMMENDATION: Use BuildKit with registry cache for faster builds
-      - name: Build Docker image with BuildKit and Registry Cache
-        run: |
-          docker build \
-            --build-arg BUILDKIT_INLINE_CACHE=1 \
-            --cache-from ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest \
-            --cache-from ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest \
-            -t ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache \
-            --progress=plain \
-            .
-
-      - name: Push Docker image with cache tag
-        run: |
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest
-          docker push ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:cache
-
-      - name: Create env file
-        run: |
-          cat > .env.yaml << EOF
-          PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CHAT_MODEL: gpt-4o-mini
-          EMBEDDING_MODEL: text-embedding-3-large
-          VECTOR_SIZE: 3072
-          DEFAULT_THRESHOLD: 0.5
-          PINECONE_INDEX_DEV: presidents-dev
-          DEBUG: true
-          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
-          NEXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
-          EOF
-
-      - name: Deploy to GCP
+      - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}/${{ env.SERVICE_NAME }}:latest \
+            --source . \
             --platform managed \
             --region ${{ env.REGION }} \
             --allow-unauthenticated \
             --memory 512Mi \
             --cpu 1 \
-            --env-vars-file .env.yaml
-
-  # RECOMMENDATION: Optional - Add a job to verify deployment
-  verify-deployment:
-    needs: deploy
-    runs-on: ubuntu-latest
-    if: always() && needs.deploy.result == 'success'
-    steps:
-      - name: Verify deployment
-        run: |
-          echo "Waiting for deployment to be ready..."
-          sleep 30
-          
-          SERVICE_URL="https://${{ env.SERVICE_NAME }}-${{ secrets.GCP_PROJECT_ID }}.uc.r.appspot.com"
-          
-          echo "Checking deployment at: $SERVICE_URL"
-          
-          # Try to access the service (don't fail if health endpoint doesn't exist)
-          if curl -s -f -o /dev/null "$SERVICE_URL"; then
-            echo "✅ Deployment is accessible! Verification passed."
-          else
-            echo "⚠️  Service is not responding yet (may still be starting up)."
-            echo "⚠️  Deployment completed successfully but verification timed out."
-            echo "Service URL: $SERVICE_URL"
-            # Don't exit with error - deployment succeeded
-          fi
-
-  # RECOMMENDATION: Optional - Add notification on failure
-  notify-failure:
-    needs: [build-and-test, deploy]
-    runs-on: ubuntu-latest
-    if: failure() && github.ref == 'refs/heads/master'
-    steps:
-      - name: Send failure notification
-        run: |
-          echo "❌ Deployment failed for commit ${{ github.sha }}"
-          echo "Check workflow run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          # Add your notification logic here (Slack, email, etc.)
+            --set-env-vars \
+              "PINECONE_API_KEY=${{ secrets.PINECONE_API_KEY }},\
+              OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }},\
+              CHAT_MODEL=gpt-4o-mini,\
+              EMBEDDING_MODEL=text-embedding-3-large,\
+              VECTOR_SIZE=3072,\
+              DEFAULT_THRESHOLD=0.5,\
+              PINECONE_INDEX_DEV=presidents-dev,\
+              DEBUG=true,\
+              NEXT_PUBLIC_FIREBASE_API_KEY=${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }},\
+              NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }},\
+              NEXT_PUBLIC_FIREBASE_PROJECT_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }},\
+              NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }},\
+              NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }},\
+              NEXT_PUBLIC_FIREBASE_APP_ID=${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}"
