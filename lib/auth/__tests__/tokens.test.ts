@@ -1,6 +1,6 @@
 // lib/auth/__tests__/tokens.test.ts
 import { cookies } from 'next/headers';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 import { getAuthTokens, type AuthTokens } from '../tokens';
 
 // Mock next/headers
@@ -13,7 +13,10 @@ jest.mock('@/lib/firebase/admin', () => ({
     adminAuth: {
         verifySessionCookie: jest.fn(),
     },
+    isFirebaseInitialized: jest.fn(() => true),
 }));
+
+const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
 describe('getAuthTokens', () => {
     const mockSessionCookie = 'mock-session-cookie-xyz';
@@ -48,6 +51,7 @@ describe('getAuthTokens', () => {
             get: jest.fn(),
         };
         (cookies as jest.Mock).mockResolvedValue(mockCookieStore);
+        (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
     });
 
     describe('Successful token retrieval', () => {
@@ -56,7 +60,7 @@ describe('getAuthTokens', () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
 
             // Mock successful verification
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -66,7 +70,7 @@ describe('getAuthTokens', () => {
             });
             expect(cookies).toHaveBeenCalled();
             expect(mockCookieStore.get).toHaveBeenCalledWith('session');
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true // checkRevoked
             );
@@ -93,7 +97,7 @@ describe('getAuthTokens', () => {
             };
 
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(minimalDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(minimalDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -112,7 +116,7 @@ describe('getAuthTokens', () => {
             };
 
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithClaims);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithClaims);
 
             const result = await getAuthTokens();
 
@@ -135,7 +139,7 @@ describe('getAuthTokens', () => {
             expect(result).toBeNull();
             expect(cookies).toHaveBeenCalled();
             expect(mockCookieStore.get).toHaveBeenCalledWith('session');
-            expect(adminAuth.verifySessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
         });
 
         it('should return null when session cookie value is empty string', async () => {
@@ -145,7 +149,7 @@ describe('getAuthTokens', () => {
 
             expect(result).toBeNull();
             expect(mockCookieStore.get).toHaveBeenCalledWith('session');
-            expect(adminAuth.verifySessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
         });
 
         it('should return null when session cookie value is null', async () => {
@@ -155,7 +159,7 @@ describe('getAuthTokens', () => {
 
             expect(result).toBeNull();
             expect(mockCookieStore.get).toHaveBeenCalledWith('session');
-            expect(adminAuth.verifySessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
         });
     });
 
@@ -164,7 +168,7 @@ describe('getAuthTokens', () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
 
             const errorMessage = 'Invalid session cookie';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -173,7 +177,7 @@ describe('getAuthTokens', () => {
             const result = await getAuthTokens();
 
             expect(result).toBeNull();
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true
             );
@@ -189,7 +193,7 @@ describe('getAuthTokens', () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
 
             const errorMessage = 'Session cookie has been revoked';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -198,7 +202,7 @@ describe('getAuthTokens', () => {
             const result = await getAuthTokens();
 
             expect(result).toBeNull();
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true
             );
@@ -211,7 +215,7 @@ describe('getAuthTokens', () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
 
             const errorMessage = 'Session cookie has expired';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -220,7 +224,7 @@ describe('getAuthTokens', () => {
             const result = await getAuthTokens();
 
             expect(result).toBeNull();
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true
             );
@@ -232,7 +236,7 @@ describe('getAuthTokens', () => {
         it('should handle non-Error exceptions', async () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 'String error'
             );
 
@@ -254,7 +258,7 @@ describe('getAuthTokens', () => {
         it('should handle cookies with special characters', async () => {
             const specialCookie = 'session=abc123!@#$%^&*()';
             mockCookieStore.get.mockReturnValue({ value: specialCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -262,7 +266,7 @@ describe('getAuthTokens', () => {
                 token: specialCookie,
                 decodedToken: mockDecodedToken,
             });
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 specialCookie,
                 true
             );
@@ -271,7 +275,7 @@ describe('getAuthTokens', () => {
         it('should handle long session cookie values', async () => {
             const longCookie = 'a'.repeat(1000);
             mockCookieStore.get.mockReturnValue({ value: longCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -279,7 +283,7 @@ describe('getAuthTokens', () => {
                 token: longCookie,
                 decodedToken: mockDecodedToken,
             });
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 longCookie,
                 true
             );
@@ -304,7 +308,7 @@ describe('getAuthTokens', () => {
             };
 
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithUndefinedFields);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithUndefinedFields);
 
             const result = await getAuthTokens();
 
@@ -320,7 +324,7 @@ describe('getAuthTokens', () => {
         it('should handle cookies() returning a Promise', async () => {
             // cookies() is already mocked to return a Promise
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -335,7 +339,7 @@ describe('getAuthTokens', () => {
                 }
                 return undefined;
             });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 
@@ -347,7 +351,7 @@ describe('getAuthTokens', () => {
     describe('Return type', () => {
         it('should return AuthTokens when authenticated', async () => {
             mockCookieStore.get.mockReturnValue({ value: mockSessionCookie });
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const result = await getAuthTokens();
 

@@ -1,14 +1,17 @@
 // app/api/auth/verify/__tests__/route.test.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { GET } from '../route';
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 // Mock Firebase admin
 jest.mock('@/lib/firebase/admin', () => ({
     adminAuth: {
         verifySessionCookie: jest.fn(),
     },
+    isFirebaseInitialized: jest.fn(() => true),
 }));
+
+const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
 // Mock NextResponse and NextRequest
 jest.mock('next/server', () => {
@@ -51,6 +54,7 @@ describe('Verify API Route - GET', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
     });
 
     describe('Successful verification', () => {
@@ -64,12 +68,12 @@ describe('Verify API Route - GET', () => {
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
             // Mock successful verification
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const response = await GET(mockRequest);
 
-            // Verify adminAuth.verifySessionCookie was called with correct params
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            // Verify mockAdminAuth.verifySessionCookie was called with correct params
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true // checkRevoked
             );
@@ -99,7 +103,7 @@ describe('Verify API Route - GET', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(minimalDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(minimalDecodedToken);
 
             await GET(mockRequest);
 
@@ -129,7 +133,7 @@ describe('Verify API Route - GET', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithNulls);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(tokenWithNulls);
 
             await GET(mockRequest);
 
@@ -156,7 +160,7 @@ describe('Verify API Route - GET', () => {
                 { authenticated: false, error: 'No session found' },
                 { status: 401 }
             );
-            expect(adminAuth.verifySessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
         });
 
         it('should return 401 if session cookie value is empty', async () => {
@@ -173,7 +177,7 @@ describe('Verify API Route - GET', () => {
                 { authenticated: false, error: 'No session found' },
                 { status: 401 }
             );
-            expect(adminAuth.verifySessionCookie).not.toHaveBeenCalled();
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
         });
     });
 
@@ -187,7 +191,7 @@ describe('Verify API Route - GET', () => {
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
             const errorMessage = 'Invalid session cookie';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -217,7 +221,7 @@ describe('Verify API Route - GET', () => {
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
             const errorMessage = 'Session cookie has been revoked';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -247,7 +251,7 @@ describe('Verify API Route - GET', () => {
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
             const errorMessage = 'Session cookie has expired';
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue(
                 new Error(errorMessage)
             );
 
@@ -276,7 +280,7 @@ describe('Verify API Route - GET', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockRejectedValue('String error');
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockRejectedValue('String error');
 
             const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
@@ -305,11 +309,11 @@ describe('Verify API Route - GET', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             await GET(mockRequest);
 
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 mockSessionCookie,
                 true
             );
@@ -326,11 +330,11 @@ describe('Verify API Route - GET', () => {
 
             // Extract the cookie value
             const cookieValue = requestOptions.headers.Cookie.split('=')[1];
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             await GET(mockRequest);
 
-            expect(adminAuth.verifySessionCookie).toHaveBeenCalledWith(
+            expect(mockAdminAuth.verifySessionCookie).toHaveBeenCalledWith(
                 cookieValue,
                 true
             );
@@ -346,7 +350,7 @@ describe('Verify API Route - GET', () => {
             };
             mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
 
-            (adminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
+            (mockAdminAuth.verifySessionCookie as jest.Mock).mockResolvedValue(mockDecodedToken);
 
             const response = await GET(mockRequest);
 

@@ -1,5 +1,5 @@
 // app/api/auth/login/__tests__/route.test.ts
-import { adminAuth } from '@/lib/firebase/admin';
+import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 import { NextRequest } from 'next/server';
 
 // Mock the Firebase admin FIRST
@@ -8,7 +8,10 @@ jest.mock('@/lib/firebase/admin', () => ({
         verifyIdToken: jest.fn(),
         createSessionCookie: jest.fn(),
     },
+    isFirebaseInitialized: jest.fn(() => true),
 }));
+
+const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
 // Mock NextRequest and NextResponse without requiring actual
 jest.mock('next/server', () => {
@@ -125,6 +128,7 @@ describe('POST /api/auth/login', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
         setNodeEnv('development');
     });
 
@@ -150,13 +154,13 @@ describe('POST /api/auth/login', () => {
         const mockDisplayName = 'Test User';
         const mockSessionCookie = 'mock-session-cookie';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
             uid: mockUid,
             email: mockEmail,
             name: mockDisplayName,
         });
 
-        (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
+        (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(mockSessionCookie);
 
         const request = createMockRequest({ idToken: mockIdToken });
         const response = await POST(request);
@@ -173,8 +177,8 @@ describe('POST /api/auth/login', () => {
             },
         });
 
-        expect(adminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
-        expect(adminAuth.createSessionCookie).toHaveBeenCalledWith(mockIdToken, {
+        expect(mockAdminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
+        expect(mockAdminAuth.createSessionCookie).toHaveBeenCalledWith(mockIdToken, {
             expiresIn: expect.any(Number),
         });
 
@@ -194,14 +198,14 @@ describe('POST /api/auth/login', () => {
             error: 'ID token is required',
         });
 
-        expect(adminAuth.verifyIdToken).not.toHaveBeenCalled();
-        expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+        expect(mockAdminAuth.verifyIdToken).not.toHaveBeenCalled();
+        expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
     });
 
     it('should return 401 when ID token is invalid', async () => {
         const mockIdToken = 'invalid-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
             new Error('Invalid ID token')
         );
 
@@ -214,19 +218,19 @@ describe('POST /api/auth/login', () => {
             error: 'Invalid ID token',
         });
 
-        expect(adminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
-        expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+        expect(mockAdminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
+        expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
     });
 
     it('should return 401 when session cookie creation fails', async () => {
         const mockIdToken = 'mock-id-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
             uid: 'user-123',
             email: 'test@example.com',
         });
 
-        (adminAuth.createSessionCookie as jest.Mock).mockRejectedValue(
+        (mockAdminAuth.createSessionCookie as jest.Mock).mockRejectedValue(
             new Error('Failed to create session cookie')
         );
 
@@ -239,8 +243,8 @@ describe('POST /api/auth/login', () => {
             error: 'Failed to create session cookie',
         });
 
-        expect(adminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
-        expect(adminAuth.createSessionCookie).toHaveBeenCalled();
+        expect(mockAdminAuth.verifyIdToken).toHaveBeenCalledWith(mockIdToken);
+        expect(mockAdminAuth.createSessionCookie).toHaveBeenCalled();
     });
 
     it('should handle malformed JSON request', async () => {
@@ -260,20 +264,20 @@ describe('POST /api/auth/login', () => {
             error: "Unexpected token 'i', \"invalid json\" is not valid JSON",
         });
 
-        expect(adminAuth.verifyIdToken).not.toHaveBeenCalled();
-        expect(adminAuth.createSessionCookie).not.toHaveBeenCalled();
+        expect(mockAdminAuth.verifyIdToken).not.toHaveBeenCalled();
+        expect(mockAdminAuth.createSessionCookie).not.toHaveBeenCalled();
     });
 
     it('should handle case where user has no display name', async () => {
         const mockIdToken = 'mock-id-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
             uid: 'user-123',
             email: 'test@example.com',
             name: undefined,
         });
 
-        (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(
+        (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(
             'mock-session-cookie'
         );
 
@@ -288,7 +292,7 @@ describe('POST /api/auth/login', () => {
     it('should handle generic unknown error', async () => {
         const mockIdToken = 'mock-id-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
             'Something went wrong'
         );
 
@@ -305,7 +309,7 @@ describe('POST /api/auth/login', () => {
     it('should handle case where token verification fails with Firebase error', async () => {
         const mockIdToken = 'mock-id-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockRejectedValue(
             new Error('Firebase: Invalid token')
         );
 
@@ -324,12 +328,12 @@ describe('POST /api/auth/login', () => {
 
         const mockIdToken = 'mock-id-token';
 
-        (adminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
+        (mockAdminAuth.verifyIdToken as jest.Mock).mockResolvedValue({
             uid: 'user-123',
             email: 'test@example.com',
         });
 
-        (adminAuth.createSessionCookie as jest.Mock).mockResolvedValue(
+        (mockAdminAuth.createSessionCookie as jest.Mock).mockResolvedValue(
             'mock-session-cookie'
         );
 
