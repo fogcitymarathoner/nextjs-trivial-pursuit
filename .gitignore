@@ -25,3 +25,5 @@ next-env.d.ts
 data/
 package-lock.json
 snapshots/
+gcp-service-account-key.json
+scripts/ps/*
