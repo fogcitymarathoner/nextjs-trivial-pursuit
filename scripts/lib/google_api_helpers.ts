@@ -4,7 +4,7 @@ import { drive_v3 } from "googleapis";
 
 import {
   CLIENT_SECRET_FILE,
-} from "@/config/env.server";
+} from "@/config/env.script";
 
 const SCOPES = ["https://www.googleapis.com/auth/drive"];
 const auth = new google.auth.GoogleAuth({

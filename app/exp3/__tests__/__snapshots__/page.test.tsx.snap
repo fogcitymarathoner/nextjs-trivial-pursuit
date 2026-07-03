@@ -1,0 +1,181 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SettingsPage Snapshot should match snapshot when checked 1`] = `
+<div>
+  <main
+    class="app-page"
+  >
+    <div
+      class="app-container"
+    >
+      <header
+        class="page-heading"
+      >
+        <h1
+          class="page-title"
+        >
+          Search Settings
+        </h1>
+        <p
+          class="page-description"
+        >
+          Configure how your AI assistant handles document search.
+        </p>
+      </header>
+      <section
+        class="surface-panel surface-panel-spacious surface-panel-compact content-stack"
+      >
+        <div
+          data-testid="mock-checkbox"
+        >
+          <span
+            data-testid="checkbox-label"
+          >
+            Allow AI to use general knowledge
+          </span>
+          <span
+            data-testid="checkbox-description"
+          >
+            When document search returns no results, the AI will answer using its training data
+          </span>
+          <span
+            data-testid="checkbox-tooltip"
+          >
+            This is useful for general questions but may not reflect your specific document content. Use with caution for factual queries.
+          </span>
+          <span
+            data-testid="checkbox-warning-title"
+          >
+            General Knowledge Mode Active
+          </span>
+          <span
+            data-testid="checkbox-warning-message"
+          >
+            The AI will now provide answers based on its general training data when specific information isn't found in your documents. This may lead to responses that are not accurate for your specific use case.
+          </span>
+          <span
+            data-testid="checkbox-size"
+          >
+            lg
+          </span>
+          <span
+            data-testid="checkbox-show-tooltip"
+          >
+            true
+          </span>
+          <span
+            data-testid="checkbox-show-warning"
+          >
+            true
+          </span>
+          <input
+            data-testid="checkbox-input"
+            type="checkbox"
+          />
+        </div>
+        <div
+          class="surface-inner-item"
+        >
+          <h3
+            class="section-label"
+          >
+            Current Behavior:
+          </h3>
+          <ul
+            class="content-list"
+          >
+            <li>
+              First searches your Pinecone index for relevant documents
+            </li>
+            <li>
+              If no results above threshold, falls back to GPT general knowledge
+            </li>
+            <li>
+              Responses may not reference your specific documents
+            </li>
+          </ul>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+`;
+
+exports[`SettingsPage Snapshot should match snapshot when unchecked 1`] = `
+<div>
+  <main
+    class="app-page"
+  >
+    <div
+      class="app-container"
+    >
+      <header
+        class="page-heading"
+      >
+        <h1
+          class="page-title"
+        >
+          Search Settings
+        </h1>
+        <p
+          class="page-description"
+        >
+          Configure how your AI assistant handles document search.
+        </p>
+      </header>
+      <section
+        class="surface-panel surface-panel-spacious surface-panel-compact content-stack"
+      >
+        <div
+          data-testid="mock-checkbox"
+        >
+          <span
+            data-testid="checkbox-label"
+          >
+            Allow AI to use general knowledge
+          </span>
+          <span
+            data-testid="checkbox-description"
+          >
+            When document search returns no results, the AI will answer using its training data
+          </span>
+          <span
+            data-testid="checkbox-tooltip"
+          >
+            This is useful for general questions but may not reflect your specific document content. Use with caution for factual queries.
+          </span>
+          <span
+            data-testid="checkbox-warning-title"
+          >
+            General Knowledge Mode Active
+          </span>
+          <span
+            data-testid="checkbox-warning-message"
+          >
+            The AI will now provide answers based on its general training data when specific information isn't found in your documents. This may lead to responses that are not accurate for your specific use case.
+          </span>
+          <span
+            data-testid="checkbox-size"
+          >
+            lg
+          </span>
+          <span
+            data-testid="checkbox-show-tooltip"
+          >
+            true
+          </span>
+          <span
+            data-testid="checkbox-show-warning"
+          >
+            true
+          </span>
+          <input
+            data-testid="checkbox-input"
+            type="checkbox"
+          />
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+`;

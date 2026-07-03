@@ -5,7 +5,7 @@ import * as path from "path";
 jest.mock("path");
 
 // Mock env
-jest.mock("@/config/env.server", () => ({
+jest.mock("@/config/env.script", () => ({
   CLIENT_SECRET_FILE: "/path/to/service-account-key.json",
 }));
 
@@ -42,7 +42,7 @@ import { google } from "googleapis";
 (google.drive as any) = mockDriveConstructor;
 
 // Now import the module being tested
-import { drive, listAllFiles, fileExists, DriveFile } from "../google_api_helpers";
+import { drive, listAllFiles, fileExists, DriveFile } from "../../scripts/lib/google_api_helpers";
 
 describe("Google Drive Module", () => {
   beforeEach(() => {

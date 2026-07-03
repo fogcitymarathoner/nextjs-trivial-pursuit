@@ -4,17 +4,19 @@ module.exports = {
     testMatch: [
         '**/*.test.ts',
         '**/*.test.tsx',
-        '**/*.test.js'],
+        '**/*.test.js',
+        '**/*.test.jsx'
+    ],
     transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
             tsconfig: 'tsconfig.json',
             jsx: 'react-jsx',
-            esModuleInterop: true,
         }],
         '^.+\\.(js|jsx)$': ['babel-jest', { presets: ['next/babel'] }],
     },
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
+        // Removed: 'next/server': '<rootDir>/__mocks__/next/server.ts',
     },
     testPathIgnorePatterns: [
         '/node_modules/',
@@ -37,10 +39,7 @@ module.exports = {
     cacheDirectory: '<rootDir>/.jest-cache',
     testTimeout: 10000,
 
-    // Enable coverage collection
     collectCoverage: true,
-
-    // Exclude ALL test files from coverage reports
     collectCoverageFrom: [
         "app/**/*.{ts,tsx}",
         "lib/**/*.{ts,tsx}",
@@ -51,17 +50,17 @@ module.exports = {
         "!**/*.test.ts",
         "!**/*.test.tsx",
         "!**/*.test.js",
+        "!**/*.test.jsx",
         "!**/*.spec.ts",
         "!**/*.spec.tsx",
         "!**/*.d.ts",
         "!**/node_modules/**",
         "!**/tmp/**",
+        '!**/fb_config.ts'
     ],
-
     coverageReporters: ["text", "text-summary", "lcov", "html"],
     coverageDirectory: "<rootDir>/coverage",
     coverageProvider: "v8",
-
     coverageThreshold: {
         global: {
             branches: 90,
