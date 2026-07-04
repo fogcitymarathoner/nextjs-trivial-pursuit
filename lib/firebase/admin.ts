@@ -94,23 +94,33 @@ const cleanPrivateKey = (privateKey: string) => {
   return cleaned;
 };
 
-// Initialize Admin SDK only if credentials exist and we're not in build time
 let firebaseInitialized = getApps().length > 0;
+export let adminAuth = firebaseInitialized ? getAuth() : null;
 
-if (!firebaseInitialized && hasCredentials() && !isBuildTime) {
+const initializeFirebaseAdmin = () => {
+  if (firebaseInitialized || getApps().length > 0) {
+    firebaseInitialized = true;
+    adminAuth ??= getAuth();
+    return;
+  }
+
+  if (isBuildTime || !hasCredentials()) {
+    return;
+  }
+
   try {
     initializeApp({
       credential: getCredential(),
     });
     firebaseInitialized = true;
+    adminAuth = getAuth();
   } catch (error) {
-    console.warn('Firebase Admin initialization skipped during build:', error);
+    console.warn('Firebase Admin initialization skipped:', error);
   }
-}
-
-// Export adminAuth - this will be undefined if no app exists
-// We need to handle this gracefully in the routes
-export const adminAuth = firebaseInitialized ? getAuth() : null;
+};
 
 // Export a helper to check if Firebase is initialized
-export const isFirebaseInitialized = () => firebaseInitialized || getApps().length > 0;
+export const isFirebaseInitialized = () => {
+  initializeFirebaseAdmin();
+  return firebaseInitialized || getApps().length > 0;
+};
