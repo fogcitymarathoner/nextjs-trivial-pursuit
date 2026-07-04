@@ -103,6 +103,7 @@ describe('Firebase Admin', () => {
         });
         // Import the module fresh
         const importedModule = await import('../admin');
+        importedModule.isFirebaseInitialized();
         return importedModule;
     };
 
