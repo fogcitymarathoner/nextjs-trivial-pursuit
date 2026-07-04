@@ -15,30 +15,13 @@ const isPublicPath = (path: string) => {
       path.startsWith('/api/auth');
 };
 
-const isAuthenticatedRequest = async (request: NextRequest) => {
-  if (!request.cookies.get('session')?.value) {
-    return false;
-  }
-
-  try {
-    const verifyUrl = new URL('/api/auth/verify', request.url);
-    const response = await fetch(verifyUrl, {
-      headers: {
-        cookie: request.headers.get('cookie') ?? '',
-      },
-      cache: 'no-store',
-    });
-
-    return response.ok;
-  } catch (error) {
-    console.error('Proxy session verification error:', error);
-    return false;
-  }
+const isAuthenticatedRequest = (request: NextRequest) => {
+  return Boolean(request.cookies.get('session')?.value);
 };
 
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
-  const authenticated = await isAuthenticatedRequest(request);
+  const authenticated = isAuthenticatedRequest(request);
 
   if (!authenticated && !isPublicPath(path)) {
     const loginUrl = new URL('/login', request.url);
