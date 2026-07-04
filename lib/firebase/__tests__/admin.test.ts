@@ -1,6 +1,6 @@
 // lib/firebase/__tests__/admin.test.ts
 import { existsSync, readFileSync } from 'fs';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 type FirebaseAdminTestGlobals = typeof globalThis & {
@@ -10,6 +10,7 @@ type FirebaseAdminTestGlobals = typeof globalThis & {
     __mockInitializeApp?: jest.Mock;
     __mockGetApps?: jest.Mock;
     __mockCert?: jest.Mock;
+    __mockApplicationDefault?: jest.Mock;
     __mockGetAuth?: jest.Mock;
 };
 
@@ -43,11 +44,13 @@ jest.mock('firebase-admin/app', () => {
     testGlobals.__mockInitializeApp ??= jest.fn();
     testGlobals.__mockGetApps ??= jest.fn().mockReturnValue([]);
     testGlobals.__mockCert ??= jest.fn();
+    testGlobals.__mockApplicationDefault ??= jest.fn();
 
     return {
         initializeApp: testGlobals.__mockInitializeApp,
         getApps: testGlobals.__mockGetApps,
         cert: testGlobals.__mockCert,
+        applicationDefault: testGlobals.__mockApplicationDefault,
     };
 });
 
@@ -78,6 +81,7 @@ describe('Firebase Admin', () => {
         // Reset the firebase-admin mocks
         (getApps as jest.Mock).mockReturnValue([]);
         (getAuth as jest.Mock).mockReturnValue({ verifySessionCookie: jest.fn() });
+        (applicationDefault as jest.Mock).mockReturnValue({});
         const testGlobals = getTestGlobals();
         testGlobals.__mockResolve?.mockImplementation((...args: string[]) => args.join('/'));
         // Reset environment

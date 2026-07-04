@@ -1,17 +1,20 @@
 // lib/firebase/admin.ts
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
+import { initializeApp, getApps, cert, applicationDefault, type ServiceAccount } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 // Check if we're in a build environment
-const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' ||
-    process.env.NODE_ENV === 'production' && !process.env.FIREBASE_PRIVATE_KEY;
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
 
 // Only initialize if credentials are available and we're not in a build-time context
 const hasCredentials = () => {
   return !!(process.env.FIREBASE_PRIVATE_KEY ||
       process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY ||
+      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCP_PROJECT_ID ||
+      process.env.K_SERVICE ||
       process.env.FIREBASE_PROJECT_ID ||
       process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
 };
@@ -71,6 +74,18 @@ const getServiceAccount = () => {
   };
 };
 
+const getCredential = () => {
+  try {
+    return cert(getServiceAccount());
+  } catch (error) {
+    if (process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY) {
+      throw error;
+    }
+
+    return applicationDefault();
+  }
+};
+
 const cleanPrivateKey = (privateKey: string) => {
   let cleaned = privateKey.replace(/\\n/g, '\n');
   if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
@@ -85,7 +100,7 @@ let firebaseInitialized = getApps().length > 0;
 if (!firebaseInitialized && hasCredentials() && !isBuildTime) {
   try {
     initializeApp({
-      credential: cert(getServiceAccount()),
+      credential: getCredential(),
     });
     firebaseInitialized = true;
   } catch (error) {
