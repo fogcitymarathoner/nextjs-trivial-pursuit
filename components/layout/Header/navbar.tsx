@@ -93,7 +93,7 @@ export const NavBar = () => {
     const isGamesActive = pathname.startsWith('/games');
 
     return (
-        <nav className="flex flex-wrap items-center gap-2 md:gap-8">
+        <nav className="flex w-full flex-wrap items-center justify-between gap-2 md:gap-8">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/about">About</NavLink>
             <NavLink href="/marc">Marc</NavLink>

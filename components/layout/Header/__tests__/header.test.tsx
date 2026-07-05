@@ -37,7 +37,7 @@ describe('Header', () => {
 
     render(<Header />);
 
-    expect(screen.getByRole('navigation')).toHaveClass('flex', 'flex-wrap', 'items-center', 'gap-2', 'md:gap-8');
+    expect(screen.getByRole('navigation')).toHaveClass('flex', 'w-full', 'flex-wrap', 'items-center', 'justify-between', 'gap-2', 'md:gap-8');
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'About' })).toHaveAttribute('href', '/about');
     expect(screen.getByRole('link', { name: 'Marc' })).toHaveAttribute('href', '/marc');
