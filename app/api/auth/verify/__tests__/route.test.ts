@@ -156,6 +156,7 @@ describe('Verify API Route - GET', () => {
 
             const response = await GET(mockRequest);
 
+            expect(isFirebaseInitialized).not.toHaveBeenCalled();
             expect(NextResponse.json).toHaveBeenCalledWith(
                 { authenticated: false, error: 'No session found' },
                 { status: 401 }
@@ -173,6 +174,7 @@ describe('Verify API Route - GET', () => {
 
             await GET(mockRequest);
 
+            expect(isFirebaseInitialized).not.toHaveBeenCalled();
             expect(NextResponse.json).toHaveBeenCalledWith(
                 { authenticated: false, error: 'No session found' },
                 { status: 401 }

@@ -1,12 +1,8 @@
 // lib/firebase/__tests__/admin.test.ts
-import { existsSync, readFileSync } from 'fs';
 import { initializeApp, getApps, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 type FirebaseAdminTestGlobals = typeof globalThis & {
-    __mockExistsSync?: jest.Mock;
-    __mockReadFileSync?: jest.Mock;
-    __mockResolve?: jest.Mock;
     __mockInitializeApp?: jest.Mock;
     __mockGetApps?: jest.Mock;
     __mockCert?: jest.Mock;
@@ -15,28 +11,6 @@ type FirebaseAdminTestGlobals = typeof globalThis & {
 };
 
 const getTestGlobals = () => globalThis as FirebaseAdminTestGlobals;
-
-// Mock fs
-jest.mock('fs', () => {
-    const testGlobals = globalThis as FirebaseAdminTestGlobals;
-    testGlobals.__mockExistsSync ??= jest.fn();
-    testGlobals.__mockReadFileSync ??= jest.fn();
-
-    return {
-        existsSync: testGlobals.__mockExistsSync,
-        readFileSync: testGlobals.__mockReadFileSync,
-    };
-});
-
-// Mock path
-jest.mock('path', () => {
-    const testGlobals = globalThis as FirebaseAdminTestGlobals;
-    testGlobals.__mockResolve ??= jest.fn((...args: string[]) => args.join('/'));
-
-    return {
-        resolve: testGlobals.__mockResolve,
-    };
-});
 
 // Mock firebase-admin
 jest.mock('firebase-admin/app', () => {
@@ -82,8 +56,6 @@ describe('Firebase Admin', () => {
         (getApps as jest.Mock).mockReturnValue([]);
         (getAuth as jest.Mock).mockReturnValue({ verifySessionCookie: jest.fn() });
         (applicationDefault as jest.Mock).mockReturnValue({});
-        const testGlobals = getTestGlobals();
-        testGlobals.__mockResolve?.mockImplementation((...args: string[]) => args.join('/'));
         // Reset environment
         process.env = { ...originalEnv };
         setNodeEnv('test');
@@ -142,16 +114,8 @@ describe('Firebase Admin', () => {
             expect(adminAuth).toBeDefined();
         });
 
-        it('should parse service account from JSON file path', async () => {
-            const mockJson = JSON.stringify({
-                project_id: 'test-project',
-                client_email: 'test@example.com',
-                private_key: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
-            });
-
-            (existsSync as jest.Mock).mockReturnValue(true);
-            (readFileSync as jest.Mock).mockReturnValue(mockJson);
-            (cert as jest.Mock).mockReturnValue({});
+        it('should not treat FIREBASE_PRIVATE_KEY as a service account file path', async () => {
+            const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: './service-account.json',
@@ -161,14 +125,11 @@ describe('Firebase Admin', () => {
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
 
-            expect(existsSync).toHaveBeenCalled();
-            expect(readFileSync).toHaveBeenCalled();
-            expect(cert).toHaveBeenCalledWith({
-                projectId: 'test-project',
-                clientEmail: 'test@example.com',
-                privateKey: '-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----',
-            });
+            expect(cert).not.toHaveBeenCalled();
+            expect(initializeApp).not.toHaveBeenCalled();
+            expect(consoleSpy).toHaveBeenCalled();
             expect(adminAuth).toBeDefined();
+            consoleSpy.mockRestore();
         });
 
         it('should clean private key by replacing \\n with newlines', async () => {
@@ -500,7 +461,6 @@ describe('Firebase Admin', () => {
             }`;
 
             (cert as jest.Mock).mockReturnValue({});
-            (existsSync as jest.Mock).mockReturnValue(false);
 
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,

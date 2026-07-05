@@ -2,7 +2,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { useRouter } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 import LoginPage from '../page';
 
 // Mock next/navigation
@@ -14,7 +15,6 @@ jest.mock('next/navigation', () => ({
 jest.mock('firebase/auth', () => {
     const mockGoogleAuthProvider = jest.fn().mockImplementation(() => ({}));
     return {
-        getAuth: jest.fn().mockReturnValue({}),
         signInWithPopup: jest.fn(),
         GoogleAuthProvider: mockGoogleAuthProvider,
     };
@@ -22,7 +22,7 @@ jest.mock('firebase/auth', () => {
 
 // Mock firebase client
 jest.mock('@/lib/firebase/client', () => ({
-    app: {},
+    getFirebaseAuth: jest.fn().mockReturnValue({}),
 }));
 
 // Mock fetch
@@ -56,7 +56,7 @@ describe('LoginPage', () => {
         mockGoogleAuthProvider = GoogleAuthProvider as unknown as jest.Mock;
         mockGoogleAuthProvider.mockClear();
         mockGoogleAuthProvider.mockImplementation(() => ({}));
-        (getAuth as jest.Mock).mockReturnValue({});
+        (getFirebaseAuth as jest.Mock).mockReturnValue({});
     });
 
     describe('Rendering', () => {

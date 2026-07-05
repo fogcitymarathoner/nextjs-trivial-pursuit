@@ -71,7 +71,8 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = 'mock-sender-id';
             process.env.NEXT_PUBLIC_FIREBASE_APP_ID = 'mock-app-id';
 
-            const { app, auth } = await import('../client');
+            const { app, getFirebaseAuth } = await import('../client');
+            const auth = getFirebaseAuth();
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: 'mock-api-key',
@@ -95,7 +96,8 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = 'mock-api-key';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project-id';
 
-            const { app, auth } = await import('../client');
+            const { app, getFirebaseAuth } = await import('../client');
+            const auth = getFirebaseAuth();
 
             expect(initializeApp).not.toHaveBeenCalled();
             expect(getAuth).toHaveBeenCalledWith(mockApp);
@@ -111,11 +113,13 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = 'mock-api-key';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project-id';
 
-            const { app, auth } = await import('../client');
+            const { app, getFirebaseAuth } = await import('../client');
+            const auth = getFirebaseAuth();
 
             expect(initializeApp).not.toHaveBeenCalled();
             expect(getAuth).toHaveBeenCalledWith(mockApp);
             expect(app).toBe(mockApp);
+            expect(auth).toBe(mockAuth);
         });
     });
 
@@ -132,7 +136,7 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID = 'test-sender-id';
             process.env.NEXT_PUBLIC_FIREBASE_APP_ID = 'test-app-id';
 
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: 'test-api-key',
@@ -157,7 +161,7 @@ describe('Firebase Client', () => {
             delete process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
             delete process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: undefined,
@@ -178,7 +182,7 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'partial-project-id';
             // Other variables left undefined
 
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: 'partial-api-key',
@@ -263,7 +267,7 @@ describe('Firebase Client', () => {
     });
 
     describe('Exports', () => {
-        it('should export app and auth instances', async () => {
+        it('should export app and lazily create auth instances', async () => {
             (getApps as jest.Mock).mockReturnValue([]);
             (initializeApp as jest.Mock).mockReturnValue(mockApp);
             (getAuth as jest.Mock).mockReturnValue(mockAuth);
@@ -271,12 +275,17 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = 'mock-api-key';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'mock-project-id';
 
-            const { app, auth } = await import('../client');
+            const { app, getFirebaseAuth } = await import('../client');
 
             expect(app).toBeDefined();
-            expect(auth).toBeDefined();
             expect(app).toBe(mockApp);
+            expect(getAuth).not.toHaveBeenCalled();
+
+            const auth = getFirebaseAuth();
+
+            expect(auth).toBeDefined();
             expect(auth).toBe(mockAuth);
+            expect(getAuth).toHaveBeenCalledWith(mockApp);
         });
     });
 
@@ -289,7 +298,7 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = '';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = '';
 
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: '',
@@ -309,7 +318,7 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = '  mock-api-key  ';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = '  mock-project-id  ';
 
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: '  mock-api-key  ',
@@ -333,7 +342,7 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'project-id-123';
 
             // Re-import the client module
-            const { app, auth } = await import('../client');
+            await import('../client');
 
             expect(initializeApp).toHaveBeenCalledWith({
                 apiKey: 'api-key-with-special!@#$%',

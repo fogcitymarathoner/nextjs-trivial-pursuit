@@ -8,7 +8,7 @@ const Home = () => {
     <main className="app-page">
       <div className="app-container">
         <header className="page-heading">
-          <h1 className="page-title">If this is blue and big, Tailwind is working!</h1>
+          <h1 className="page-title text-blue-600">If this is blue and big, Tailwind is working!</h1>
           <p className="page-description">
             Shared global styling is active across the app.
           </p>

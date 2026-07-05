@@ -3,8 +3,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { app } from '@/lib/firebase/client';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase/client';
 
 type AuthErrorLike = {
     code?: string;
@@ -43,7 +43,7 @@ export const GoogleSignIn = () => {
         setError('');
 
         try {
-            const auth = getAuth(app);
+            const auth = getFirebaseAuth();
             const provider = new GoogleAuthProvider();
 
             const result = await signInWithPopup(auth, provider);

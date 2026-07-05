@@ -4,21 +4,21 @@ import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if Firebase is initialized
-    if (!isFirebaseInitialized() || !adminAuth) {
-      console.error('Firebase Admin is not initialized. Check your credentials.');
-      return NextResponse.json(
-          { authenticated: false, error: 'Server configuration error' },
-          { status: 500 }
-      );
-    }
-
     const sessionCookie = request.cookies.get('session')?.value;
 
     if (!sessionCookie) {
       return NextResponse.json(
           { authenticated: false, error: 'No session found' },
           { status: 401 }
+      );
+    }
+
+    // Check if Firebase is initialized
+    if (!isFirebaseInitialized() || !adminAuth) {
+      console.error('Firebase Admin is not initialized. Check your credentials.');
+      return NextResponse.json(
+          { authenticated: false, error: 'Server configuration error' },
+          { status: 500 }
       );
     }
 

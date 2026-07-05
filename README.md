@@ -31,3 +31,16 @@ node .next/standalone/server.js
 ## Or test with Docker
 docker build -t my-app .
 docker run -p 3000:3000 my-app
+
+# Summary of PowerShell + Yarn commands:
+| Alias | Command | Description |
+|:------|:--------|:------------|
+| `pt` | `yarn playwright test` | Run all tests headless |
+| `ptu` | `yarn playwright test --ui` | Run with interactive UI |
+| `pth` | `yarn playwright test --headed` | Run with visible browser |
+| (custom) | `yarn playwright test --debug` | Run in debug mode |
+| (custom) | `yarn playwright test navigation.spec.ts` | Run specific file |
+| (custom) | `yarn playwright test --project=chromium` | Run specific browser |
+| (custom) | `yarn playwright show-report` | View test report |
+| (custom) | `yarn playwright codegen` | Record a test by interacting |
+| (custom) | `yarn create playwright` | Install Playwright |
