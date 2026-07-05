@@ -7,7 +7,7 @@ const port = Number(env.PLAYWRIGHT_PORT ?? 3000);
 const host = env.PLAYWRIGHT_HOST ?? '127.0.0.1';
 const baseURL = `http://${host}:${port}`;
 const webServerCommand = isCI
-  ? 'yarn build && node .next/standalone/server.js'
+  ? 'yarn build && node scripts/copy-standalone-assets.mjs && node scripts/start-playwright-standalone.mjs'
   : `node node_modules/next/dist/bin/next dev -H ${host} -p ${port}`;
 const browserProjects = [
   {
