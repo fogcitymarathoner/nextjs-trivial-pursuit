@@ -1,16 +1,21 @@
 // app/api/auth/session/__tests__/route.test.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { POST } from '../route';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { adminAuth, getFirebaseAdminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 // Mock Firebase admin
-jest.mock('@/lib/firebase/admin', () => ({
-    adminAuth: {
+jest.mock('@/lib/firebase/admin', () => {
+    const adminAuth = {
         verifyIdToken: jest.fn(),
         createSessionCookie: jest.fn(),
-    },
-    isFirebaseInitialized: jest.fn(() => true),
-}));
+    };
+
+    return {
+        adminAuth,
+        getFirebaseAdminAuth: jest.fn(() => adminAuth),
+        isFirebaseInitialized: jest.fn(() => true),
+    };
+});
 
 const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
@@ -65,6 +70,7 @@ describe('Session API Route - POST', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
+        (getFirebaseAdminAuth as jest.Mock).mockReturnValue(mockAdminAuth);
 
         // Setup request with idToken
         const requestOptions = {

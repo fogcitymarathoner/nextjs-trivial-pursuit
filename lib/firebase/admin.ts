@@ -5,15 +5,43 @@ import { getAuth } from 'firebase-admin/auth';
 const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
 
 // Only initialize if credentials are available and we're not in a build-time context
+const hasValue = (value: string | undefined) => !!value?.trim();
+
+const hasCompleteServiceAccount = (
+  projectId: string | undefined,
+  clientEmail: string | undefined,
+  privateKey: string | undefined,
+) => hasValue(projectId) && hasValue(clientEmail) && hasValue(privateKey);
+
+const hasJsonServiceAccount = (value: string | undefined) => {
+  return typeof value === 'string' && value.trim().startsWith('{');
+};
+
+const hasApplicationDefaultCredentials = () => {
+  return !!(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.GOOGLE_CLOUD_PROJECT ||
+    process.env.GCP_PROJECT_ID ||
+    process.env.K_SERVICE
+  );
+};
+
 const hasCredentials = () => {
-  return !!(process.env.FIREBASE_PRIVATE_KEY ||
-      process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY ||
-      process.env.GOOGLE_APPLICATION_CREDENTIALS ||
-      process.env.GOOGLE_CLOUD_PROJECT ||
-      process.env.GCP_PROJECT_ID ||
-      process.env.K_SERVICE ||
-      process.env.FIREBASE_PROJECT_ID ||
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+  return (
+    hasJsonServiceAccount(process.env.FIREBASE_PRIVATE_KEY) ||
+    hasJsonServiceAccount(process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY) ||
+    hasCompleteServiceAccount(
+      process.env.FIREBASE_PROJECT_ID,
+      process.env.FIREBASE_CLIENT_EMAIL,
+      process.env.FIREBASE_PRIVATE_KEY,
+    ) ||
+    hasCompleteServiceAccount(
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
+      process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
+    ) ||
+    hasApplicationDefaultCredentials()
+  );
 };
 
 const normalizeServiceAccount = (parsed: Record<string, unknown>): ServiceAccount => {
@@ -39,29 +67,42 @@ const normalizeServiceAccount = (parsed: Record<string, unknown>): ServiceAccoun
   };
 };
 
-// Helper to get service account
+// Helper to get service account. Keep credential namespaces together so a
+// stray FIREBASE_PRIVATE_KEY cannot be mixed with NEXT_PUBLIC project/email.
 const getServiceAccount = () => {
-  const serviceAccountJsonOrPrivateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
+  const serviceAccountJson = [process.env.FIREBASE_PRIVATE_KEY, process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY]
+    .find(hasJsonServiceAccount);
 
-  if (serviceAccountJsonOrPrivateKey) {
-    if (serviceAccountJsonOrPrivateKey.trim().startsWith('{')) {
-      const parsed = JSON.parse(serviceAccountJsonOrPrivateKey);
-      return normalizeServiceAccount(parsed);
-    }
+  if (serviceAccountJson) {
+    const parsed = JSON.parse(serviceAccountJson);
+    return normalizeServiceAccount(parsed);
   }
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL || process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
+  const credentialSets = [
+    {
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY,
+    },
+    {
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      clientEmail: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
+    },
+  ];
 
-  if (!projectId || !clientEmail || !privateKey) {
+  const credentials = credentialSets.find(({ projectId, clientEmail, privateKey }) => {
+    return hasCompleteServiceAccount(projectId, clientEmail, privateKey);
+  });
+
+  if (!credentials) {
     throw new Error('Missing Firebase Admin credentials');
   }
 
   return {
-    projectId,
-    clientEmail,
-    privateKey: cleanPrivateKey(privateKey),
+    projectId: credentials.projectId!,
+    clientEmail: credentials.clientEmail!,
+    privateKey: cleanPrivateKey(credentials.privateKey!),
   };
 };
 
@@ -114,4 +155,9 @@ const initializeFirebaseAdmin = () => {
 export const isFirebaseInitialized = () => {
   initializeFirebaseAdmin();
   return firebaseInitialized || getApps().length > 0;
+};
+
+export const getFirebaseAdminAuth = () => {
+  initializeFirebaseAdmin();
+  return adminAuth;
 };

@@ -1,6 +1,6 @@
 // lib/auth/__tests__/tokens.test.ts
 import { cookies } from 'next/headers';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { adminAuth, getFirebaseAdminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 import { getAuthTokens, type AuthTokens } from '../tokens';
 
 // Mock next/headers
@@ -9,12 +9,17 @@ jest.mock('next/headers', () => ({
 }));
 
 // Mock firebase admin
-jest.mock('@/lib/firebase/admin', () => ({
-    adminAuth: {
+jest.mock('@/lib/firebase/admin', () => {
+    const adminAuth = {
         verifySessionCookie: jest.fn(),
-    },
-    isFirebaseInitialized: jest.fn(() => true),
-}));
+    };
+
+    return {
+        adminAuth,
+        getFirebaseAdminAuth: jest.fn(() => adminAuth),
+        isFirebaseInitialized: jest.fn(() => true),
+    };
+});
 
 const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
@@ -52,6 +57,7 @@ describe('getAuthTokens', () => {
         };
         (cookies as jest.Mock).mockResolvedValue(mockCookieStore);
         (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
+        (getFirebaseAdminAuth as jest.Mock).mockReturnValue(mockAdminAuth);
     });
 
     describe('Successful token retrieval', () => {

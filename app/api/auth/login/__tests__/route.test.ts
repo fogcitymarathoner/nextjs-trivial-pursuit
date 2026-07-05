@@ -1,15 +1,20 @@
 // app/api/auth/login/__tests__/route.test.ts
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { adminAuth, getFirebaseAdminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 import { NextRequest } from 'next/server';
 
 // Mock the Firebase admin FIRST
-jest.mock('@/lib/firebase/admin', () => ({
-    adminAuth: {
+jest.mock('@/lib/firebase/admin', () => {
+    const adminAuth = {
         verifyIdToken: jest.fn(),
         createSessionCookie: jest.fn(),
-    },
-    isFirebaseInitialized: jest.fn(() => true),
-}));
+    };
+
+    return {
+        adminAuth,
+        getFirebaseAdminAuth: jest.fn(() => adminAuth),
+        isFirebaseInitialized: jest.fn(() => true),
+    };
+});
 
 const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
@@ -129,6 +134,7 @@ describe('POST /api/auth/login', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
+        (getFirebaseAdminAuth as jest.Mock).mockReturnValue(mockAdminAuth);
         setNodeEnv('development');
     });
 
