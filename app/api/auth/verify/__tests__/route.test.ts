@@ -1,15 +1,20 @@
 // app/api/auth/verify/__tests__/route.test.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { GET } from '../route';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { adminAuth, getFirebaseAdminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
 
 // Mock Firebase admin
-jest.mock('@/lib/firebase/admin', () => ({
-    adminAuth: {
+jest.mock('@/lib/firebase/admin', () => {
+    const adminAuth = {
         verifySessionCookie: jest.fn(),
-    },
-    isFirebaseInitialized: jest.fn(() => true),
-}));
+    };
+
+    return {
+        adminAuth,
+        getFirebaseAdminAuth: jest.fn(() => adminAuth),
+        isFirebaseInitialized: jest.fn(() => true),
+    };
+});
 
 const mockAdminAuth = adminAuth as NonNullable<typeof adminAuth>;
 
@@ -55,6 +60,7 @@ describe('Verify API Route - GET', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (isFirebaseInitialized as jest.Mock).mockReturnValue(true);
+        (getFirebaseAdminAuth as jest.Mock).mockReturnValue(mockAdminAuth);
     });
 
     describe('Successful verification', () => {

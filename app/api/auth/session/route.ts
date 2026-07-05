@@ -16,12 +16,14 @@ allowing you to use server-side authentication and protect routes with middlewar
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { getFirebaseAdminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
     // Check if Firebase is initialized
-    if (!isFirebaseInitialized() || !adminAuth) {
+    const auth = getFirebaseAdminAuth();
+
+    if (!auth) {
       console.error('Firebase Admin is not initialized. Check your credentials.');
       return NextResponse.json(
           { error: 'Server configuration error' },
@@ -38,10 +40,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const decodedToken = await auth.verifyIdToken(idToken);
 
     const expiresIn = 60 * 60 * 24 * 5 * 1000; // 5 days
-    const sessionCookie = await adminAuth.createSessionCookie(idToken, { expiresIn });
+    const sessionCookie = await auth.createSessionCookie(idToken, { expiresIn });
 
     const response = NextResponse.json({
       success: true,

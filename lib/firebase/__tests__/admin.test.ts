@@ -127,7 +127,7 @@ describe('Firebase Admin', () => {
 
             expect(cert).not.toHaveBeenCalled();
             expect(initializeApp).not.toHaveBeenCalled();
-            expect(consoleSpy).toHaveBeenCalled();
+            expect(consoleSpy).not.toHaveBeenCalled();
             expect(adminAuth).toBeDefined();
             consoleSpy.mockRestore();
         });

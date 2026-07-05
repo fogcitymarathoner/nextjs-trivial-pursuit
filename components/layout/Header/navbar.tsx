@@ -21,7 +21,8 @@ export const NavBar = () => {
                 credentials: 'include',
                 cache: 'no-store',
             });
-            setIsAuthenticated(response.ok);
+            const isAuth = response.ok;
+            setIsAuthenticated(isAuth);
         } catch (error) {
             console.error('Auth check failed:', error);
             setIsAuthenticated(false);
@@ -73,6 +74,7 @@ export const NavBar = () => {
 
             if (response.ok) {
                 setIsAuthenticated(false);
+                setIsGamesOpen(false); // Close dropdown on logout
                 router.push('/');
                 router.refresh();
             }
@@ -84,7 +86,10 @@ export const NavBar = () => {
     };
 
     const toggleGames = () => {
-        setIsGamesOpen(!isGamesOpen);
+        // Only allow toggling if authenticated
+        if (isAuthenticated) {
+            setIsGamesOpen(!isGamesOpen);
+        }
     };
 
     const navItemClass = 'px-3 py-2 rounded-md text-sm font-medium transition';
@@ -98,43 +103,44 @@ export const NavBar = () => {
             <NavLink href="/about">About</NavLink>
             <NavLink href="/marc">Marc</NavLink>
 
-            {/* Games Dropdown */}
-            <div className="relative" ref={dropdownRef}>
-                <button
-                    onClick={toggleGames}
-                    className={`${navItemClass} ${isGamesActive ? activeNavItemClass : inactiveNavItemClass} flex items-center`}
-                >
-                    <span>Games</span>
-                    <svg
-                        className={`w-4 h-4 ml-1 transition-transform duration-200 ${isGamesOpen ? 'rotate-180' : ''}`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
+            {!isLoading && isAuthenticated && (
+                <div className="relative" ref={dropdownRef}>
+                    <button
+                        onClick={toggleGames}
+                        className={`${navItemClass} ${isGamesActive ? activeNavItemClass : inactiveNavItemClass} flex items-center`}
                     >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+                        <span>Games</span>
+                        <svg
+                            className={`w-4 h-4 ml-1 transition-transform duration-200 ${isGamesOpen ? 'rotate-180' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
 
-                {isGamesOpen && (
+                    {isGamesOpen && (
                     <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 flex flex-col">
                         <NavLink
                             href="/games/game1"
-                            className="block w-full px-4"
+                            className="block w-full px-4 py-2 hover:bg-gray-100"
                             onClick={() => setIsGamesOpen(false)}
                         >
                             Game 1
                         </NavLink>
                         <NavLink
                             href="/games/game2"
-                            className="block w-full px-4"
+                            className="block w-full px-4 py-2 hover:bg-gray-100"
                             onClick={() => setIsGamesOpen(false)}
                         >
                             Game 2
                         </NavLink>
                     </div>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             {/* Login/Logout */}
             {isLoading ? (

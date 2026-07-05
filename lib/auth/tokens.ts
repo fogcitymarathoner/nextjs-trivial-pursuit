@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import type { DecodedIdToken } from 'firebase-admin/auth';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { getFirebaseAdminAuth } from '@/lib/firebase/admin';
 
 export type AuthTokens = {
   token: string;
@@ -15,12 +15,14 @@ export async function getAuthTokens(): Promise<AuthTokens | null> {
     return null;
   }
 
-  if (!isFirebaseInitialized() || !adminAuth) {
+  const auth = getFirebaseAdminAuth();
+
+  if (!auth) {
     return null;
   }
 
   try {
-    const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
 
     return {
       token: sessionCookie,

@@ -1,6 +1,6 @@
 // app/api/auth/verify/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, isFirebaseInitialized } from '@/lib/firebase/admin';
+import { getFirebaseAdminAuth } from '@/lib/firebase/admin';
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if Firebase is initialized
-    if (!isFirebaseInitialized() || !adminAuth) {
+    const auth = getFirebaseAdminAuth();
+
+    if (!auth) {
       console.error('Firebase Admin is not initialized. Check your credentials.');
       return NextResponse.json(
           { authenticated: false, error: 'Server configuration error' },
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const decodedToken = await adminAuth.verifySessionCookie(sessionCookie, true);
+      const decodedToken = await auth.verifySessionCookie(sessionCookie, true);
       return NextResponse.json({
         authenticated: true,
         user: {

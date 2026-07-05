@@ -105,6 +105,26 @@ describe('NavBar', () => {
     expect(screen.queryByRole('link', { name: 'Login' })).not.toBeInTheDocument();
   });
 
+  it('shows authenticated games button and toggles game links', async () => {
+    mockUsePathname.mockReturnValue('/');
+    mockFetch.mockResolvedValueOnce({ ok: true });
+
+    render(<NavBar />);
+
+    const gamesButton = await screen.findByRole('button', { name: 'Games' });
+    expect(gamesButton).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Game 1' })).not.toBeInTheDocument();
+
+    await user.click(gamesButton);
+
+    expect(screen.getByRole('link', { name: 'Game 1' })).toHaveAttribute('href', '/games/game1');
+    expect(screen.getByRole('link', { name: 'Game 2' })).toHaveAttribute('href', '/games/game2');
+
+    await user.click(gamesButton);
+
+    expect(screen.queryByRole('link', { name: 'Game 1' })).not.toBeInTheDocument();
+  });
+
   it('handles logout successfully', async () => {
     mockUsePathname.mockReturnValue('/dashboard');
     const logoutResponse = createDeferredResponse();
