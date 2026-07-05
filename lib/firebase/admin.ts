@@ -1,6 +1,3 @@
-// lib/firebase/admin.ts
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
 import { initializeApp, getApps, cert, applicationDefault, type ServiceAccount } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -44,17 +41,11 @@ const normalizeServiceAccount = (parsed: Record<string, unknown>): ServiceAccoun
 
 // Helper to get service account
 const getServiceAccount = () => {
-  const serviceAccountJsonOrPath = process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
+  const serviceAccountJsonOrPrivateKey = process.env.FIREBASE_PRIVATE_KEY || process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
-  if (serviceAccountJsonOrPath) {
-    if (serviceAccountJsonOrPath.trim().startsWith('{')) {
-      const parsed = JSON.parse(serviceAccountJsonOrPath);
-      return normalizeServiceAccount(parsed);
-    }
-
-    const serviceAccountPath = resolve(serviceAccountJsonOrPath);
-    if (existsSync(serviceAccountPath)) {
-      const parsed = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+  if (serviceAccountJsonOrPrivateKey) {
+    if (serviceAccountJsonOrPrivateKey.trim().startsWith('{')) {
+      const parsed = JSON.parse(serviceAccountJsonOrPrivateKey);
       return normalizeServiceAccount(parsed);
     }
   }

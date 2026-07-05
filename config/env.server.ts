@@ -3,11 +3,15 @@ import { loadEnvConfig } from '@next/env';
 
 loadEnvConfig(process.cwd());
 
+const shouldWarnMissingEnv = process.env.DEBUG_ENV === 'true';
+
 // More permissive version that logs but doesn't throw immediately
 export const envServer = (key: string): string | undefined => {
   const value = process.env[key];
   if (!value) {
-    console.warn(`${key} is not set in environment variables`);
+    if (shouldWarnMissingEnv) {
+      console.warn(`${key} is not set in environment variables`);
+    }
     return undefined;
   }
   return value;
@@ -28,6 +32,6 @@ export const NEXT_PUBLIC_FIREBASE_API_KEY = envServer('NEXT_PUBLIC_FIREBASE_API_
 export const FIREBASE_PRIVATE_KEY = envServer('FIREBASE_PRIVATE_KEY')
 
 // Add a check
-if (!PINECONE_INDEX_DEV) {
+if (!PINECONE_INDEX_DEV && shouldWarnMissingEnv) {
   console.error('WARNING: PINECONE_INDEX_DEV is not set! Please check your .env.local file');
 }

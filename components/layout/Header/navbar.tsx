@@ -3,13 +3,15 @@
 // components/layout/Header/navbar.tsx
 
 import { NavLink } from '@/components/navlink';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
 export const NavBar = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const [isGamesOpen, setIsGamesOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -47,6 +49,20 @@ export const NavBar = () => {
         };
     }, []);
 
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsGamesOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
     const handleLogout = async () => {
         setIsLoggingOut(true);
         try {
@@ -67,30 +83,76 @@ export const NavBar = () => {
         }
     };
 
+    const toggleGames = () => {
+        setIsGamesOpen(!isGamesOpen);
+    };
+
+    const navItemClass = 'px-3 py-2 rounded-md text-sm font-medium transition';
+    const activeNavItemClass = 'bg-blue-900 text-white';
+    const inactiveNavItemClass = 'text-blue-700 hover:text-blue-900 hover:bg-blue-100';
+    const isGamesActive = pathname.startsWith('/games');
+
     return (
-        <nav className="hidden md:flex space-x-8 items-center">
+        <nav className="flex flex-wrap items-center gap-2 md:gap-8">
             <NavLink href="/">Home</NavLink>
             <NavLink href="/about">About</NavLink>
             <NavLink href="/marc">Marc</NavLink>
 
-            <div className="ml-4">
-                {isLoading ? (
-                    <div className="w-20 h-10 bg-gray-200 rounded-md animate-pulse"></div>
-                ) : isLoggingOut ? (
-                    <span className="px-3 py-2 rounded-md text-sm font-medium text-gray-400 bg-gray-100 cursor-not-allowed">
-                        Logging out...
-                    </span>
-                ) : isAuthenticated ? (
-                    <button
-                        onClick={handleLogout}
-                        className="px-3 py-2 rounded-md text-sm font-medium text-blue-700 hover:text-blue-900 hover:bg-blue-100 transition"
+            {/* Games Dropdown */}
+            <div className="relative" ref={dropdownRef}>
+                <button
+                    onClick={toggleGames}
+                    className={`${navItemClass} ${isGamesActive ? activeNavItemClass : inactiveNavItemClass} flex items-center`}
+                >
+                    <span>Games</span>
+                    <svg
+                        className={`w-4 h-4 ml-1 transition-transform duration-200 ${isGamesOpen ? 'rotate-180' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
                     >
-                        Logout
-                    </button>
-                ) : (
-                    <NavLink href="/login">Login</NavLink>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+
+                {isGamesOpen && (
+                    <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50 flex flex-col">
+                        <NavLink
+                            href="/games/game1"
+                            className="block w-full px-4"
+                            onClick={() => setIsGamesOpen(false)}
+                        >
+                            Game 1
+                        </NavLink>
+                        <NavLink
+                            href="/games/game2"
+                            className="block w-full px-4"
+                            onClick={() => setIsGamesOpen(false)}
+                        >
+                            Game 2
+                        </NavLink>
+                    </div>
                 )}
             </div>
+
+            {/* Login/Logout */}
+            {isLoading ? (
+                <div className="w-20 h-10 bg-gray-200 rounded-md animate-pulse"></div>
+            ) : isLoggingOut ? (
+                <span className="px-3 py-2 rounded-md text-sm font-medium text-gray-400 bg-gray-100 cursor-not-allowed">
+                    Logging out...
+                </span>
+            ) : isAuthenticated ? (
+                <button
+                    onClick={handleLogout}
+                    className={`${navItemClass} ${inactiveNavItemClass}`}
+                >
+                    Logout
+                </button>
+            ) : (
+                <NavLink href="/login">Login</NavLink>
+            )}
         </nav>
     );
 };

@@ -27,3 +27,11 @@ package-lock.json
 snapshots/
 gcp-service-account-key.json
 scripts/ps/*
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
