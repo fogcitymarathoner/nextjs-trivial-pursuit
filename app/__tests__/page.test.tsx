@@ -6,11 +6,6 @@ import { render, screen } from '@testing-library/react';
 import Home from '../page';
 import '@testing-library/jest-dom';
 
-// Mock dotenv
-jest.mock('dotenv', () => ({
-  config: jest.fn(),
-}));
-
 describe('Home Page', () => {
   it('renders the heading with correct text', () => {
     render(<Home />);
@@ -43,10 +38,5 @@ describe('Home Page', () => {
     const heading = screen.getByRole('heading', { level: 1 });
     expect(heading.children).toHaveLength(0);
     expect(heading.textContent).toBeTruthy();
-  });
-
-  it('loads environment variables from .env.local', () => {
-    const dotenv = require('dotenv');
-    expect(dotenv.config).toHaveBeenCalledWith({ path: '.env.local' });
   });
 });

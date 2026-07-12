@@ -1,6 +1,11 @@
 // lib/firebase/__tests__/client.test.ts
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import {
+    initializeFirestore,
+    persistentLocalCache,
+    persistentMultipleTabManager,
+} from 'firebase/firestore';
 
 // Mock firebase/app
 jest.mock('firebase/app', () => {
@@ -8,6 +13,9 @@ jest.mock('firebase/app', () => {
         initializeApp: jest.fn(),
         getApps: jest.fn().mockReturnValue([]),
         getAuth: jest.fn(),
+        initializeFirestore: jest.fn(),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
     });
 
     return {
@@ -22,10 +30,30 @@ jest.mock('firebase/auth', () => {
         initializeApp: jest.fn(),
         getApps: jest.fn().mockReturnValue([]),
         getAuth: jest.fn(),
+        initializeFirestore: jest.fn(),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
     });
 
     return {
         getAuth: mocks.getAuth,
+    };
+});
+
+jest.mock('firebase/firestore', () => {
+    const mocks = ((globalThis as any).__firebaseClientTestMocks ??= {
+        initializeApp: jest.fn(),
+        getApps: jest.fn().mockReturnValue([]),
+        getAuth: jest.fn(),
+        initializeFirestore: jest.fn(),
+        persistentLocalCache: jest.fn(),
+        persistentMultipleTabManager: jest.fn(),
+    });
+
+    return {
+        initializeFirestore: mocks.initializeFirestore,
+        persistentLocalCache: mocks.persistentLocalCache,
+        persistentMultipleTabManager: mocks.persistentMultipleTabManager,
     };
 });
 
@@ -36,6 +64,7 @@ describe('Firebase Client', () => {
     const originalEnv = process.env;
     const mockApp = { name: '[DEFAULT]' };
     const mockAuth = { currentUser: null };
+    const mockDb = { type: 'firestore' };
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -49,6 +78,9 @@ describe('Firebase Client', () => {
         // Set default return values
         (initializeApp as jest.Mock).mockReturnValue(mockApp);
         (getAuth as jest.Mock).mockReturnValue(mockAuth);
+        (initializeFirestore as jest.Mock).mockReturnValue(mockDb);
+        (persistentMultipleTabManager as jest.Mock).mockReturnValue({ type: 'multi-tab' });
+        (persistentLocalCache as jest.Mock).mockReturnValue({ type: 'persistent-cache' });
     });
 
     afterEach(() => {
@@ -161,16 +193,12 @@ describe('Firebase Client', () => {
             delete process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
             delete process.env.NEXT_PUBLIC_FIREBASE_APP_ID;
 
-            await import('../client');
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-            expect(initializeApp).toHaveBeenCalledWith({
-                apiKey: undefined,
-                authDomain: undefined,
-                projectId: undefined,
-                storageBucket: undefined,
-                messagingSenderId: undefined,
-                appId: undefined,
-            });
+            await expect(import('../client')).rejects.toThrow('Firebase configuration is incomplete');
+
+            expect(initializeApp).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
         });
 
         it('should handle partial environment variables', async () => {
@@ -231,7 +259,9 @@ describe('Firebase Client', () => {
 
             const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-            await import('../client');
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            await expect(import('../client')).rejects.toThrow('Firebase configuration is incomplete');
 
             expect(consoleLogSpy).toHaveBeenCalledWith(
                 '🔧 Firebase Client Config:',
@@ -241,6 +271,7 @@ describe('Firebase Client', () => {
                     projectId: '❌',
                 })
             );
+            consoleErrorSpy.mockRestore();
         });
 
         it('should log mixed status for Firebase config values', async () => {
@@ -253,7 +284,9 @@ describe('Firebase Client', () => {
 
             const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
-            await import('../client');
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            await expect(import('../client')).rejects.toThrow('Firebase configuration is incomplete');
 
             expect(consoleLogSpy).toHaveBeenCalledWith(
                 '🔧 Firebase Client Config:',
@@ -263,6 +296,7 @@ describe('Firebase Client', () => {
                     projectId: '❌',
                 })
             );
+            consoleErrorSpy.mockRestore();
         });
     });
 
@@ -298,16 +332,12 @@ describe('Firebase Client', () => {
             process.env.NEXT_PUBLIC_FIREBASE_API_KEY = '';
             process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = '';
 
-            await import('../client');
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
-            expect(initializeApp).toHaveBeenCalledWith({
-                apiKey: '',
-                authDomain: undefined,
-                projectId: '',
-                storageBucket: undefined,
-                messagingSenderId: undefined,
-                appId: undefined,
-            });
+            await expect(import('../client')).rejects.toThrow('Firebase configuration is incomplete');
+
+            expect(initializeApp).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
         });
 
         it('should handle whitespace in environment variables', async () => {

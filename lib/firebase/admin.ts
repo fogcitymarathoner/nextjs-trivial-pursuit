@@ -107,6 +107,12 @@ const getServiceAccount = () => {
 };
 
 const getCredential = () => {
+  // GOOGLE_APPLICATION_CREDENTIALS and managed Google runtimes should use
+  // Firebase Admin's standard Application Default Credentials flow directly.
+  if (hasApplicationDefaultCredentials()) {
+    return applicationDefault();
+  }
+
   try {
     return cert(getServiceAccount());
   } catch (error) {

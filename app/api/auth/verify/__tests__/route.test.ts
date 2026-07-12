@@ -308,6 +308,108 @@ describe('Verify API Route - GET', () => {
         });
     });
 
+    // NEW TEST: Firebase not initialized
+    describe('Error handling - Firebase not initialized', () => {
+        it('should return 500 if Firebase Admin is not initialized', async () => {
+            const requestOptions = {
+                headers: {
+                    Cookie: `session=${mockSessionCookie}`,
+                },
+            };
+            mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
+
+            // Mock Firebase as NOT initialized
+            (getFirebaseAdminAuth as jest.Mock).mockReturnValue(null);
+
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            await GET(mockRequest);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Firebase Admin is not initialized. Check your credentials.'
+            );
+
+            expect(NextResponse.json).toHaveBeenCalledWith(
+                { authenticated: false, error: 'Server configuration error' },
+                { status: 500 }
+            );
+
+            // Verify verifySessionCookie was NOT called
+            expect(mockAdminAuth.verifySessionCookie).not.toHaveBeenCalled();
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    // NEW TEST: Outer catch block (unexpected errors)
+    describe('Error handling - Unexpected errors', () => {
+        it('should return 500 if an unexpected error occurs in the outer try-catch', async () => {
+            // This is tricky to trigger. We need to cause an error in the outer try block
+            // before we reach the Firebase initialization or session verification.
+            // One way is to mock a failure in request.cookies.get
+
+            // Mock request.cookies.get to throw an error
+            const mockCookiesGet = jest.fn().mockImplementation(() => {
+                throw new Error('Unexpected cookie parsing error');
+            });
+
+            // We need to create a request that will fail in the outer try block
+            // The easiest way is to mock NextRequest to return a request with a broken cookies object
+            const brokenRequest = {
+                cookies: {
+                    get: mockCookiesGet
+                }
+            } as unknown as NextRequest;
+
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            await GET(brokenRequest);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Verify error:',
+                expect.any(Error)
+            );
+
+            expect(NextResponse.json).toHaveBeenCalledWith(
+                { authenticated: false, error: 'Verification failed' },
+                { status: 500 }
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+
+        // Alternative approach: Mock a failure in getFirebaseAdminAuth that throws
+        it('should return 500 if getFirebaseAdminAuth throws an error', async () => {
+            const requestOptions = {
+                headers: {
+                    Cookie: `session=${mockSessionCookie}`,
+                },
+            };
+            mockRequest = new NextRequest('http://localhost:3000/api/auth/verify', requestOptions);
+
+            // Mock getFirebaseAdminAuth to throw an error
+            (getFirebaseAdminAuth as jest.Mock).mockImplementation(() => {
+                throw new Error('Database connection error');
+            });
+
+            const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+            await GET(mockRequest);
+
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Verify error:',
+                expect.any(Error)
+            );
+
+            expect(NextResponse.json).toHaveBeenCalledWith(
+                { authenticated: false, error: 'Verification failed' },
+                { status: 500 }
+            );
+
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
     describe('Cookie parsing', () => {
         it('should handle multiple cookies in request', async () => {
             const requestOptions = {

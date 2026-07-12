@@ -246,6 +246,27 @@ describe('Firebase Admin', () => {
     });
 
     describe('Environment variable fallback', () => {
+        it('should prefer application default credentials when configured', async () => {
+            const mockCredential = { source: 'application-default' };
+            (applicationDefault as jest.Mock).mockReturnValue(mockCredential);
+
+            await importWithEnv({
+                GOOGLE_APPLICATION_CREDENTIALS: './service-account.json',
+                FIREBASE_PRIVATE_KEY: '',
+                FIREBASE_PROJECT_ID: '',
+                FIREBASE_CLIENT_EMAIL: '',
+                NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
+                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
+            });
+
+            expect(applicationDefault).toHaveBeenCalled();
+            expect(cert).not.toHaveBeenCalled();
+            expect(initializeApp).toHaveBeenCalledWith({
+                credential: mockCredential,
+            });
+        });
+
         it('should use individual environment variables when FIREBASE_PRIVATE_KEY is not set', async () => {
             (cert as jest.Mock).mockReturnValue({});
 

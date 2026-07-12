@@ -15,6 +15,7 @@
       "*": ["./*"]
     },
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["node", "jest"],
     "allowJs": true,
     "noEmit": true,
     "incremental": true,
@@ -23,6 +24,6 @@
     "moduleDetection": "force",
     "plugins": [{ "name": "next" }]
   },
-  "include": ["app", "components", "lib", "scripts", "config", ".next/types/**/*.ts"],
+  "include": ["app", "components", "hooks", "lib", "scripts", "config", "jest.setup.ts", "jest.setup.extended.ts", ".next/types/**/*.ts"],
   "exclude": ["node_modules", "**/tmp/**"]
 }
