@@ -16,21 +16,21 @@ jest.mock('next/server', () => ({
 const defaultEnvMocks = {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'mock-project-id',
     NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: 'mock@example.com',
-    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: 'mock-private-key',
+    FIREBASE_PRIVATE_KEY: 'mock-private-key',
     NEXT_PUBLIC_FIREBASE_API_KEY: 'mock-api-key',
 };
 
-type EnvServerMock = {
+type FirebaseEnvMocks = {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: string | undefined;
     NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: string | undefined;
-    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: string | undefined;
+    FIREBASE_PRIVATE_KEY: string | undefined;
     NEXT_PUBLIC_FIREBASE_API_KEY: string | undefined;
 };
 
 type TestEnvResponseBody = {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: string;
     NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: string;
-    NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: string;
+    FIREBASE_PRIVATE_KEY: string;
     NEXT_PUBLIC_FIREBASE_API_KEY: string;
     COOKIE_SIGNATURE_KEY: string;
     NODE_ENV: string | undefined;
@@ -45,9 +45,16 @@ type MockJsonResponse<T> = {
 
 type GetHandler = () => Promise<MockJsonResponse<TestEnvResponseBody>>;
 
-const getRouteWithEnv = async (envMocks: EnvServerMock): Promise<GetHandler> => {
+const getRouteWithEnv = async (envMocks: FirebaseEnvMocks): Promise<GetHandler> => {
     jest.resetModules();
-    jest.doMock('@/config/env.server', () => envMocks);
+    jest.doMock('@/config/env.server', () => ({
+        FIREBASE_PRIVATE_KEY: envMocks.FIREBASE_PRIVATE_KEY,
+    }));
+    jest.doMock('@/config/env.client', () => ({
+        NEXT_PUBLIC_FIREBASE_PROJECT_ID: envMocks.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: envMocks.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
+        NEXT_PUBLIC_FIREBASE_API_KEY: envMocks.NEXT_PUBLIC_FIREBASE_API_KEY,
+    }));
 
     const route = await import('../route');
     return route.GET as unknown as GetHandler;
@@ -89,7 +96,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: `✅ (${testKey.length} chars)`,
                 NODE_ENV: 'test',
@@ -103,7 +110,7 @@ describe('Test Env API Route - GET', () => {
             const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: undefined,
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: undefined,
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: undefined,
+                FIREBASE_PRIVATE_KEY: undefined,
                 NEXT_PUBLIC_FIREBASE_API_KEY: undefined,
             });
 
@@ -112,7 +119,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '❌',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '❌',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '❌',
+                FIREBASE_PRIVATE_KEY: '❌',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '❌',
                 COOKIE_SIGNATURE_KEY: '✅ (8 chars)',
                 NODE_ENV: 'test',
@@ -129,7 +136,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: '❌ MISSING',
                 NODE_ENV: 'test',
@@ -147,7 +154,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: `✅ (${testKey.length} chars)`,
                 NODE_ENV: 'development',
@@ -165,7 +172,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: `✅ (${testKey.length} chars)`,
                 NODE_ENV: 'production',
@@ -183,7 +190,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: `✅ (${testKey.length} chars)`,
                 NODE_ENV: 'staging',
@@ -199,7 +206,7 @@ describe('Test Env API Route - GET', () => {
             const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'mock-project-id',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: undefined,
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: 'mock-private-key',
+                FIREBASE_PRIVATE_KEY: 'mock-private-key',
                 NEXT_PUBLIC_FIREBASE_API_KEY: undefined,
             });
 
@@ -208,7 +215,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '❌',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '❌',
                 COOKIE_SIGNATURE_KEY: '✅ (8 chars)',
                 NODE_ENV: 'test',
@@ -222,7 +229,7 @@ describe('Test Env API Route - GET', () => {
             const GET = await getRouteWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
+                FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
 
@@ -231,7 +238,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '❌',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '❌',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '❌',
+                FIREBASE_PRIVATE_KEY: '❌',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '❌',
                 COOKIE_SIGNATURE_KEY: '❌ MISSING',
                 NODE_ENV: 'test',
@@ -251,7 +258,7 @@ describe('Test Env API Route - GET', () => {
             expect(response.body).toEqual({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '✅',
                 NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '✅',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '✅',
+                FIREBASE_PRIVATE_KEY: '✅',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '✅',
                 COOKIE_SIGNATURE_KEY: '✅ (8 chars)',
                 NODE_ENV: 'test',
@@ -268,7 +275,7 @@ describe('Test Env API Route - GET', () => {
             const expectedKeys = [
                 'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
                 'NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL',
-                'NEXT_PUBLIC_FIREBASE_PRIVATE_KEY',
+                'FIREBASE_PRIVATE_KEY',
                 'NEXT_PUBLIC_FIREBASE_API_KEY',
                 'COOKIE_SIGNATURE_KEY',
                 'NODE_ENV',
