@@ -24,7 +24,7 @@ export const PINECONE_API_KEY = envServer('PINECONE_API_KEY');
 export const VECTOR_SIZE = envServer('VECTOR_SIZE');
 export const DEFAULT_THRESHOLD = envServer('DEFAULT_THRESHOLD');
 export const PINECONE_INDEX_DEV = envServer('PINECONE_INDEX_DEV') || '';
-
+export const FIREBASE_CLIENT_EMAIL = envServer('FIREBASE_CLIENT_EMAIL');
 export const FIREBASE_PRIVATE_KEY = envServer('FIREBASE_PRIVATE_KEY')
 // Add a check
 if (!PINECONE_INDEX_DEV && shouldWarnMissingEnv) {

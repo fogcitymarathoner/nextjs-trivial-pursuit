@@ -14,12 +14,12 @@ console.log('📁 Loading .env.local from:', resolve(process.cwd(), '.env.local'
 // Check if environment variables are loaded
 console.log('\n📋 Environment variables status:');
 console.log('  NEXT_PUBLIC_FIREBASE_PROJECT_ID:', process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✅ Present' : '❌ MISSING');
-console.log('  NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL:', process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL ? '✅ Present' : '❌ MISSING');
+console.log('  FIREBASE_CLIENT_EMAIL:', process.env.FIREBASE_CLIENT_EMAIL ? '✅ Present' : '❌ MISSING');
 console.log('  NEXT_PUBLIC_FIREBASE_PRIVATE_KEY:', process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY ? `✅ Present (${process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY.length} chars)` : '❌ MISSING');
 
 // Get credentials from NEXT_PUBLIC_ environment variables
 const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-const clientEmail = process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
 let privateKey = process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY;
 
 // Check if all required variables are present
@@ -27,7 +27,7 @@ if (!projectId || !clientEmail || !privateKey) {
   console.error('\n❌ Missing required environment variables!');
   console.error('   Please ensure these are set in .env.local:');
   console.error('   - NEXT_PUBLIC_FIREBASE_PROJECT_ID');
-  console.error('   - NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL');
+  console.error('   - FIREBASE_CLIENT_EMAIL');
   console.error('   - NEXT_PUBLIC_FIREBASE_PRIVATE_KEY');
   process.exit(1);
 }
