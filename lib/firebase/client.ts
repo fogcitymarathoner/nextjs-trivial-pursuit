@@ -1,30 +1,45 @@
 // lib/firebase/client.ts
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
-
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-};
+import { firebaseConfig, firestoreDatabaseId } from './config';
 
 console.log('🔧 Firebase Client Config:', {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? '✅' : '❌',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ? '✅' : '❌',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✅' : '❌',
+  apiKey: firebaseConfig.apiKey ? '✅' : '❌',
+  authDomain: firebaseConfig.authDomain ? '✅' : '❌',
+  projectId: firebaseConfig.projectId ? '✅' : '❌',
+  storageBucket: firebaseConfig.storageBucket ? '✅' : '❌',
+  messagingSenderId: firebaseConfig.messagingSenderId ? '✅' : '❌',
+  appId: firebaseConfig.appId ? '✅' : '❌',
 });
 
-// Initialize Firebase
+// Validate required config
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Missing required Firebase configuration!');
+  throw new Error('Firebase configuration is incomplete');
+}
+
+// Initialize the browser SDK once
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+console.log('✅ Firebase app initialized:', app.name);
+
+// Initialize Firestore with settings
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+}, firestoreDatabaseId);
+console.log('✅ Firestore initialized');
+
 let auth: Auth | undefined;
 
 const getFirebaseAuth = () => {
-  auth ??= getAuth(app);
+  if (!auth) {
+    auth = getAuth(app);
+    console.log('✅ Firebase Auth initialized');
+  }
   return auth;
 };
 
-export { app, getFirebaseAuth };
+export { app, db, getFirebaseAuth };

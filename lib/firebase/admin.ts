@@ -26,27 +26,43 @@ const hasApplicationDefaultCredentials = () => {
   );
 };
 
+const getCredentialSets = () => [
+  {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY,
+  },
+  {
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY,
+  },
+  {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
+  },
+  {
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
+  },
+];
+
 const hasCredentials = () => {
   return (
     hasJsonServiceAccount(process.env.FIREBASE_PRIVATE_KEY) ||
     hasJsonServiceAccount(process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY) ||
-    hasCompleteServiceAccount(
-      process.env.FIREBASE_PROJECT_ID,
-      process.env.FIREBASE_CLIENT_EMAIL,
-      process.env.FIREBASE_PRIVATE_KEY,
-    ) ||
-    hasCompleteServiceAccount(
-      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
-      process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
-    ) ||
+    getCredentialSets().some(({ projectId, clientEmail, privateKey }) => {
+      return hasCompleteServiceAccount(projectId, clientEmail, privateKey);
+    }) ||
     hasApplicationDefaultCredentials()
   );
 };
 
 const normalizeServiceAccount = (parsed: Record<string, unknown>): ServiceAccount => {
   const projectId = parsed.project_id || process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  const clientEmail = parsed.client_email || process.env.FIREBASE_CLIENT_EMAIL || process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL;
+  const clientEmail = parsed.client_email || process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = parsed.private_key;
 
   if (
@@ -67,8 +83,9 @@ const normalizeServiceAccount = (parsed: Record<string, unknown>): ServiceAccoun
   };
 };
 
-// Helper to get service account. Keep credential namespaces together so a
-// stray FIREBASE_PRIVATE_KEY cannot be mixed with NEXT_PUBLIC project/email.
+// Helper to get service account. Prefer the first complete credential set that
+// can be assembled from runtime process.env values, falling back to the
+// supporting next-public values when the server-side values are blank.
 const getServiceAccount = () => {
   const serviceAccountJson = [process.env.FIREBASE_PRIVATE_KEY, process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY]
     .find(hasJsonServiceAccount);
@@ -78,20 +95,7 @@ const getServiceAccount = () => {
     return normalizeServiceAccount(parsed);
   }
 
-  const credentialSets = [
-    {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY,
-    },
-    {
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.NEXT_PUBLIC_FIREBASE_PRIVATE_KEY,
-    },
-  ];
-
-  const credentials = credentialSets.find(({ projectId, clientEmail, privateKey }) => {
+  const credentials = getCredentialSets().find(({ projectId, clientEmail, privateKey }) => {
     return hasCompleteServiceAccount(projectId, clientEmail, privateKey);
   });
 
@@ -107,6 +111,12 @@ const getServiceAccount = () => {
 };
 
 const getCredential = () => {
+  // GOOGLE_APPLICATION_CREDENTIALS and managed Google runtimes should use
+  // Firebase Admin's standard Application Default Credentials flow directly.
+  if (hasApplicationDefaultCredentials()) {
+    return applicationDefault();
+  }
+
   try {
     return cert(getServiceAccount());
   } catch (error) {

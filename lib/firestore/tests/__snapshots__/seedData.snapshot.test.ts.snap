@@ -1,0 +1,983 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Seed Data Snapshots Category Data Snapshots should match the categories with usage stats snapshot: sample-categories-usage 1`] = `
+[
+  {
+    "category": "Electronics",
+    "productCount": 4,
+    "products": [
+      "Wireless Bluetooth Headphones",
+      "Smartphone Stand",
+      "LED Desk Lamp",
+      "Bluetooth Speaker",
+    ],
+  },
+  {
+    "category": "Clothing",
+    "productCount": 2,
+    "products": [
+      "Organic Cotton T-Shirt",
+      "Canvas Backpack",
+    ],
+  },
+  {
+    "category": "Home & Kitchen",
+    "productCount": 2,
+    "products": [
+      "Stainless Steel Water Bottle",
+      "Coffee Mug Set",
+    ],
+  },
+  {
+    "category": "Sports & Outdoors",
+    "productCount": 2,
+    "products": [
+      "Yoga Mat Premium",
+      "Running Shoes",
+    ],
+  },
+  {
+    "category": "Books",
+    "productCount": 0,
+    "products": [],
+  },
+  {
+    "category": "Toys & Games",
+    "productCount": 0,
+    "products": [],
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Category Data Snapshots should match the category product distribution snapshot: sample-category-distribution 1`] = `
+{
+  "Books": 0,
+  "Clothing": 2,
+  "Electronics": 4,
+  "Home & Kitchen": 2,
+  "Sports & Outdoors": 2,
+  "Toys & Games": 0,
+}
+`;
+
+exports[`Seed Data Snapshots Category Data Snapshots should match the full sample categories snapshot: sample-categories-full 1`] = `
+[
+  "Electronics",
+  "Clothing",
+  "Home & Kitchen",
+  "Sports & Outdoors",
+  "Books",
+  "Toys & Games",
+]
+`;
+
+exports[`Seed Data Snapshots Category Data Snapshots should match the sorted categories snapshot: sample-categories-sorted 1`] = `
+[
+  "Books",
+  "Clothing",
+  "Electronics",
+  "Home & Kitchen",
+  "Sports & Outdoors",
+  "Toys & Games",
+]
+`;
+
+exports[`Seed Data Snapshots Category Data Snapshots should match the unused categories snapshot: sample-unused-categories 1`] = `
+[
+  "Books",
+  "Toys & Games",
+]
+`;
+
+exports[`Seed Data Snapshots Custom Comparison Snapshots should match the products grouped by price range snapshot: sample-products-grouped-by-price 1`] = `
+{
+  "budget": [
+    {
+      "category": "Clothing",
+      "description": "Comfortable 100% organic cotton t-shirt, eco-friendly",
+      "inStock": true,
+      "name": "Organic Cotton T-Shirt",
+      "price": 24.99,
+    },
+    {
+      "category": "Home & Kitchen",
+      "description": "Insulated 20oz water bottle, keeps drinks cold for 24 hours",
+      "inStock": false,
+      "name": "Stainless Steel Water Bottle",
+      "price": 19.99,
+    },
+    {
+      "category": "Electronics",
+      "description": "Adjustable desktop phone stand, compatible with all smartphones",
+      "inStock": true,
+      "name": "Smartphone Stand",
+      "price": 12.99,
+    },
+    {
+      "category": "Home & Kitchen",
+      "description": "Set of 4 ceramic coffee mugs with unique designs",
+      "inStock": true,
+      "name": "Coffee Mug Set",
+      "price": 29.99,
+    },
+  ],
+  "midRange": [
+    {
+      "category": "Sports & Outdoors",
+      "description": "Non-slip 6mm thick yoga mat with alignment lines",
+      "inStock": true,
+      "name": "Yoga Mat Premium",
+      "price": 45,
+    },
+    {
+      "category": "Electronics",
+      "description": "Adjustable LED desk lamp with 3 color temperatures",
+      "inStock": false,
+      "name": "LED Desk Lamp",
+      "price": 34.99,
+    },
+    {
+      "category": "Clothing",
+      "description": "Durable canvas backpack with laptop sleeve",
+      "inStock": true,
+      "name": "Canvas Backpack",
+      "price": 49.99,
+    },
+    {
+      "category": "Electronics",
+      "description": "Portable waterproof Bluetooth speaker with 360° sound",
+      "inStock": true,
+      "name": "Bluetooth Speaker",
+      "price": 59.99,
+    },
+  ],
+  "premium": [
+    {
+      "category": "Electronics",
+      "description": "Premium noise-canceling wireless headphones with 30-hour battery life",
+      "inStock": true,
+      "name": "Wireless Bluetooth Headphones",
+      "price": 79.99,
+    },
+    {
+      "category": "Sports & Outdoors",
+      "description": "Lightweight running shoes with cushioned soles",
+      "inStock": true,
+      "name": "Running Shoes",
+      "price": 89.99,
+    },
+  ],
+}
+`;
+
+exports[`Seed Data Snapshots Custom Comparison Snapshots should match the products sorted by name snapshot: sample-products-sorted-by-name 1`] = `
+[
+  {
+    "category": "Electronics",
+    "name": "Bluetooth Speaker",
+    "price": 59.99,
+  },
+  {
+    "category": "Clothing",
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "name": "Coffee Mug Set",
+    "price": 29.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "LED Desk Lamp",
+    "price": 34.99,
+  },
+  {
+    "category": "Clothing",
+    "name": "Organic Cotton T-Shirt",
+    "price": 24.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Running Shoes",
+    "price": 89.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "Smartphone Stand",
+    "price": 12.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "name": "Stainless Steel Water Bottle",
+    "price": 19.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Yoga Mat Premium",
+    "price": 45,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Custom Comparison Snapshots should match the products sorted by price snapshot: sample-products-sorted-by-price 1`] = `
+[
+  {
+    "category": "Electronics",
+    "name": "Smartphone Stand",
+    "price": 12.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "name": "Stainless Steel Water Bottle",
+    "price": 19.99,
+  },
+  {
+    "category": "Clothing",
+    "name": "Organic Cotton T-Shirt",
+    "price": 24.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "name": "Coffee Mug Set",
+    "price": 29.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "LED Desk Lamp",
+    "price": 34.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Yoga Mat Premium",
+    "price": 45,
+  },
+  {
+    "category": "Clothing",
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "Bluetooth Speaker",
+    "price": 59.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Running Shoes",
+    "price": 89.99,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Custom Comparison Snapshots should match the products with inStock status snapshot: sample-stock-status 1`] = `
+{
+  "byCategory": {
+    "Clothing": {
+      "inStock": 2,
+      "outOfStock": 0,
+    },
+    "Electronics": {
+      "inStock": 3,
+      "outOfStock": 1,
+    },
+    "Home & Kitchen": {
+      "inStock": 1,
+      "outOfStock": 1,
+    },
+    "Sports & Outdoors": {
+      "inStock": 2,
+      "outOfStock": 0,
+    },
+  },
+  "inStock": 8,
+  "outOfStock": 2,
+}
+`;
+
+exports[`Seed Data Snapshots Detailed Data Analysis Snapshots should match the description analysis snapshot: sample-description-analysis 1`] = `
+{
+  "averageLength": 53.1,
+  "averageWordCount": 7.6,
+  "descriptions": [
+    "Premium noise-canceling wireless headphones with 30-hour battery life",
+    "Comfortable 100% organic cotton t-shirt, eco-friendly",
+    "Insulated 20oz water bottle, keeps drinks cold for 24 hours",
+    "Non-slip 6mm thick yoga mat with alignment lines",
+    "Adjustable desktop phone stand, compatible with all smartphones",
+    "Set of 4 ceramic coffee mugs with unique designs",
+    "Lightweight running shoes with cushioned soles",
+    "Adjustable LED desk lamp with 3 color temperatures",
+    "Durable canvas backpack with laptop sleeve",
+    "Portable waterproof Bluetooth speaker with 360° sound",
+  ],
+  "keywords": {
+    "durable": 1,
+    "lightweight": 1,
+    "noise_canceling": 1,
+    "organic": 1,
+    "premium": 1,
+    "wireless": 1,
+  },
+  "longestDescription": {
+    "category": "Electronics",
+    "description": "Premium noise-canceling wireless headphones with 30-hour battery life",
+    "inStock": true,
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  "shortestDescription": {
+    "category": "Clothing",
+    "description": "Durable canvas backpack with laptop sleeve",
+    "inStock": true,
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+}
+`;
+
+exports[`Seed Data Snapshots Detailed Data Analysis Snapshots should match the detailed product analysis snapshot: sample-detailed-product-analysis 1`] = `
+[
+  {
+    "category": "Electronics",
+    "description": "Premium noise-canceling wireless headphones with 30-hour battery life",
+    "descriptionLength": 69,
+    "descriptionWordCount": 8,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Wireless Bluetooth Headphones",
+    "nameLength": 29,
+    "price": 79.99,
+    "priceCategory": "premium",
+  },
+  {
+    "category": "Clothing",
+    "description": "Comfortable 100% organic cotton t-shirt, eco-friendly",
+    "descriptionLength": 53,
+    "descriptionWordCount": 6,
+    "hasSpecialChars": true,
+    "inStock": true,
+    "name": "Organic Cotton T-Shirt",
+    "nameLength": 22,
+    "price": 24.99,
+    "priceCategory": "budget",
+  },
+  {
+    "category": "Home & Kitchen",
+    "description": "Insulated 20oz water bottle, keeps drinks cold for 24 hours",
+    "descriptionLength": 59,
+    "descriptionWordCount": 10,
+    "hasSpecialChars": false,
+    "inStock": false,
+    "name": "Stainless Steel Water Bottle",
+    "nameLength": 28,
+    "price": 19.99,
+    "priceCategory": "budget",
+  },
+  {
+    "category": "Sports & Outdoors",
+    "description": "Non-slip 6mm thick yoga mat with alignment lines",
+    "descriptionLength": 48,
+    "descriptionWordCount": 8,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Yoga Mat Premium",
+    "nameLength": 16,
+    "price": 45,
+    "priceCategory": "mid-range",
+  },
+  {
+    "category": "Electronics",
+    "description": "Adjustable desktop phone stand, compatible with all smartphones",
+    "descriptionLength": 63,
+    "descriptionWordCount": 8,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Smartphone Stand",
+    "nameLength": 16,
+    "price": 12.99,
+    "priceCategory": "budget",
+  },
+  {
+    "category": "Home & Kitchen",
+    "description": "Set of 4 ceramic coffee mugs with unique designs",
+    "descriptionLength": 48,
+    "descriptionWordCount": 9,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Coffee Mug Set",
+    "nameLength": 14,
+    "price": 29.99,
+    "priceCategory": "budget",
+  },
+  {
+    "category": "Sports & Outdoors",
+    "description": "Lightweight running shoes with cushioned soles",
+    "descriptionLength": 46,
+    "descriptionWordCount": 6,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Running Shoes",
+    "nameLength": 13,
+    "price": 89.99,
+    "priceCategory": "premium",
+  },
+  {
+    "category": "Electronics",
+    "description": "Adjustable LED desk lamp with 3 color temperatures",
+    "descriptionLength": 50,
+    "descriptionWordCount": 8,
+    "hasSpecialChars": false,
+    "inStock": false,
+    "name": "LED Desk Lamp",
+    "nameLength": 13,
+    "price": 34.99,
+    "priceCategory": "mid-range",
+  },
+  {
+    "category": "Clothing",
+    "description": "Durable canvas backpack with laptop sleeve",
+    "descriptionLength": 42,
+    "descriptionWordCount": 6,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Canvas Backpack",
+    "nameLength": 15,
+    "price": 49.99,
+    "priceCategory": "mid-range",
+  },
+  {
+    "category": "Electronics",
+    "description": "Portable waterproof Bluetooth speaker with 360° sound",
+    "descriptionLength": 53,
+    "descriptionWordCount": 7,
+    "hasSpecialChars": false,
+    "inStock": true,
+    "name": "Bluetooth Speaker",
+    "nameLength": 17,
+    "price": 59.99,
+    "priceCategory": "mid-range",
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Detailed Data Analysis Snapshots should match the price statistics snapshot: sample-price-statistics 1`] = `
+{
+  "average": 44.791000000000004,
+  "max": 89.99,
+  "median": 39.995000000000005,
+  "min": 12.99,
+  "quartiles": {
+    "q1": 24.99,
+    "q2": 45,
+    "q3": 59.99,
+  },
+  "range": 77,
+  "total": 447.91,
+}
+`;
+
+exports[`Seed Data Snapshots Detailed Data Analysis Snapshots should match the product name analysis snapshot: sample-name-analysis 1`] = `
+{
+  "averageLength": 18.3,
+  "containsBrand": 10,
+  "containsProduct": 0,
+  "longestName": "Wireless Bluetooth Headphones",
+  "names": [
+    "Wireless Bluetooth Headphones",
+    "Organic Cotton T-Shirt",
+    "Stainless Steel Water Bottle",
+    "Yoga Mat Premium",
+    "Smartphone Stand",
+    "Coffee Mug Set",
+    "Running Shoes",
+    "LED Desk Lamp",
+    "Canvas Backpack",
+    "Bluetooth Speaker",
+  ],
+  "shortestName": "Running Shoes",
+}
+`;
+
+exports[`Seed Data Snapshots Format and Structure Snapshots should match the category structure snapshot: sample-category-structure 1`] = `
+{
+  "allLowerCase": false,
+  "allUpperCase": false,
+  "averageLength": 11.166666666666666,
+  "categories": [
+    "Electronics",
+    "Clothing",
+    "Home & Kitchen",
+    "Sports & Outdoors",
+    "Books",
+    "Toys & Games",
+  ],
+  "count": 6,
+  "hasSpaces": true,
+}
+`;
+
+exports[`Seed Data Snapshots Format and Structure Snapshots should match the data integrity snapshot: sample-data-integrity 1`] = `
+{
+  "allProductsHaveDescriptions": true,
+  "allProductsHaveValidNames": true,
+  "hasEmptyStrings": false,
+  "hasInvalidCategories": false,
+  "hasNullValues": false,
+  "hasZeroOrNegativePrices": false,
+  "uniqueProductNames": true,
+}
+`;
+
+exports[`Seed Data Snapshots Format and Structure Snapshots should match the product data structure snapshot: sample-product-schema 1`] = `
+{
+  "properties": [
+    "name",
+    "price",
+    "description",
+    "category",
+    "inStock",
+  ],
+  "required": [
+    "name",
+    "price",
+    "description",
+    "category",
+    "inStock",
+  ],
+  "types": [
+    {
+      "example": "Wireless Bluetooth Headphones",
+      "field": "name",
+      "type": "string",
+    },
+    {
+      "example": 79.99,
+      "field": "price",
+      "type": "number",
+    },
+    {
+      "example": "Premium noise-canceling wireless headphones with 30-hour battery life",
+      "field": "description",
+      "type": "string",
+    },
+    {
+      "example": "Electronics",
+      "field": "category",
+      "type": "string",
+    },
+    {
+      "example": true,
+      "field": "inStock",
+      "type": "boolean",
+    },
+  ],
+}
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the full sample products snapshot: sample-products-full 1`] = `
+[
+  {
+    "category": "Electronics",
+    "description": "Premium noise-canceling wireless headphones with 30-hour battery life",
+    "inStock": true,
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  {
+    "category": "Clothing",
+    "description": "Comfortable 100% organic cotton t-shirt, eco-friendly",
+    "inStock": true,
+    "name": "Organic Cotton T-Shirt",
+    "price": 24.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "description": "Insulated 20oz water bottle, keeps drinks cold for 24 hours",
+    "inStock": false,
+    "name": "Stainless Steel Water Bottle",
+    "price": 19.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "description": "Non-slip 6mm thick yoga mat with alignment lines",
+    "inStock": true,
+    "name": "Yoga Mat Premium",
+    "price": 45,
+  },
+  {
+    "category": "Electronics",
+    "description": "Adjustable desktop phone stand, compatible with all smartphones",
+    "inStock": true,
+    "name": "Smartphone Stand",
+    "price": 12.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "description": "Set of 4 ceramic coffee mugs with unique designs",
+    "inStock": true,
+    "name": "Coffee Mug Set",
+    "price": 29.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "description": "Lightweight running shoes with cushioned soles",
+    "inStock": true,
+    "name": "Running Shoes",
+    "price": 89.99,
+  },
+  {
+    "category": "Electronics",
+    "description": "Adjustable LED desk lamp with 3 color temperatures",
+    "inStock": false,
+    "name": "LED Desk Lamp",
+    "price": 34.99,
+  },
+  {
+    "category": "Clothing",
+    "description": "Durable canvas backpack with laptop sleeve",
+    "inStock": true,
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+  {
+    "category": "Electronics",
+    "description": "Portable waterproof Bluetooth speaker with 360° sound",
+    "inStock": true,
+    "name": "Bluetooth Speaker",
+    "price": 59.99,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the in-stock products snapshot: sample-in-stock-products 1`] = `
+[
+  {
+    "category": "Electronics",
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  {
+    "category": "Clothing",
+    "name": "Organic Cotton T-Shirt",
+    "price": 24.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Yoga Mat Premium",
+    "price": 45,
+  },
+  {
+    "category": "Electronics",
+    "name": "Smartphone Stand",
+    "price": 12.99,
+  },
+  {
+    "category": "Home & Kitchen",
+    "name": "Coffee Mug Set",
+    "price": 29.99,
+  },
+  {
+    "category": "Sports & Outdoors",
+    "name": "Running Shoes",
+    "price": 89.99,
+  },
+  {
+    "category": "Clothing",
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "Bluetooth Speaker",
+    "price": 59.99,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the out-of-stock products snapshot: sample-out-of-stock-products 1`] = `
+[
+  {
+    "category": "Home & Kitchen",
+    "name": "Stainless Steel Water Bottle",
+    "price": 19.99,
+  },
+  {
+    "category": "Electronics",
+    "name": "LED Desk Lamp",
+    "price": 34.99,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product categories snapshot: sample-product-categories 1`] = `
+[
+  {
+    "category": "Electronics",
+    "inStock": true,
+    "name": "Wireless Bluetooth Headphones",
+  },
+  {
+    "category": "Clothing",
+    "inStock": true,
+    "name": "Organic Cotton T-Shirt",
+  },
+  {
+    "category": "Home & Kitchen",
+    "inStock": false,
+    "name": "Stainless Steel Water Bottle",
+  },
+  {
+    "category": "Sports & Outdoors",
+    "inStock": true,
+    "name": "Yoga Mat Premium",
+  },
+  {
+    "category": "Electronics",
+    "inStock": true,
+    "name": "Smartphone Stand",
+  },
+  {
+    "category": "Home & Kitchen",
+    "inStock": true,
+    "name": "Coffee Mug Set",
+  },
+  {
+    "category": "Sports & Outdoors",
+    "inStock": true,
+    "name": "Running Shoes",
+  },
+  {
+    "category": "Electronics",
+    "inStock": false,
+    "name": "LED Desk Lamp",
+  },
+  {
+    "category": "Clothing",
+    "inStock": true,
+    "name": "Canvas Backpack",
+  },
+  {
+    "category": "Electronics",
+    "inStock": true,
+    "name": "Bluetooth Speaker",
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product descriptions snapshot: sample-product-descriptions 1`] = `
+[
+  {
+    "description": "Premium noise-canceling wireless headphones with 30-hour battery life",
+    "descriptionLength": 69,
+    "name": "Wireless Bluetooth Headphones",
+  },
+  {
+    "description": "Comfortable 100% organic cotton t-shirt, eco-friendly",
+    "descriptionLength": 53,
+    "name": "Organic Cotton T-Shirt",
+  },
+  {
+    "description": "Insulated 20oz water bottle, keeps drinks cold for 24 hours",
+    "descriptionLength": 59,
+    "name": "Stainless Steel Water Bottle",
+  },
+  {
+    "description": "Non-slip 6mm thick yoga mat with alignment lines",
+    "descriptionLength": 48,
+    "name": "Yoga Mat Premium",
+  },
+  {
+    "description": "Adjustable desktop phone stand, compatible with all smartphones",
+    "descriptionLength": 63,
+    "name": "Smartphone Stand",
+  },
+  {
+    "description": "Set of 4 ceramic coffee mugs with unique designs",
+    "descriptionLength": 48,
+    "name": "Coffee Mug Set",
+  },
+  {
+    "description": "Lightweight running shoes with cushioned soles",
+    "descriptionLength": 46,
+    "name": "Running Shoes",
+  },
+  {
+    "description": "Adjustable LED desk lamp with 3 color temperatures",
+    "descriptionLength": 50,
+    "name": "LED Desk Lamp",
+  },
+  {
+    "description": "Durable canvas backpack with laptop sleeve",
+    "descriptionLength": 42,
+    "name": "Canvas Backpack",
+  },
+  {
+    "description": "Portable waterproof Bluetooth speaker with 360° sound",
+    "descriptionLength": 53,
+    "name": "Bluetooth Speaker",
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product names snapshot: sample-product-names 1`] = `
+[
+  "Wireless Bluetooth Headphones",
+  "Organic Cotton T-Shirt",
+  "Stainless Steel Water Bottle",
+  "Yoga Mat Premium",
+  "Smartphone Stand",
+  "Coffee Mug Set",
+  "Running Shoes",
+  "LED Desk Lamp",
+  "Canvas Backpack",
+  "Bluetooth Speaker",
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product price distribution snapshot: sample-price-distribution 1`] = `
+{
+  "20-50": 5,
+  "50-100": 3,
+  "over100": 0,
+  "under20": 2,
+}
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product prices snapshot: sample-product-prices 1`] = `
+[
+  {
+    "name": "Wireless Bluetooth Headphones",
+    "price": 79.99,
+  },
+  {
+    "name": "Organic Cotton T-Shirt",
+    "price": 24.99,
+  },
+  {
+    "name": "Stainless Steel Water Bottle",
+    "price": 19.99,
+  },
+  {
+    "name": "Yoga Mat Premium",
+    "price": 45,
+  },
+  {
+    "name": "Smartphone Stand",
+    "price": 12.99,
+  },
+  {
+    "name": "Coffee Mug Set",
+    "price": 29.99,
+  },
+  {
+    "name": "Running Shoes",
+    "price": 89.99,
+  },
+  {
+    "name": "LED Desk Lamp",
+    "price": 34.99,
+  },
+  {
+    "name": "Canvas Backpack",
+    "price": 49.99,
+  },
+  {
+    "name": "Bluetooth Speaker",
+    "price": 59.99,
+  },
+]
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the product summary snapshot: sample-product-summary 1`] = `
+{
+  "averagePrice": 44.79,
+  "categories": [
+    "Clothing",
+    "Electronics",
+    "Home & Kitchen",
+    "Sports & Outdoors",
+  ],
+  "categoryCount": 4,
+  "inStockCount": 8,
+  "maxPrice": 89.99,
+  "minPrice": 12.99,
+  "outOfStockCount": 2,
+  "stockRate": 80,
+  "totalProducts": 10,
+  "totalValue": 447.91,
+}
+`;
+
+exports[`Seed Data Snapshots Product Data Snapshots should match the products by category snapshot: sample-products-by-category 1`] = `
+{
+  "Clothing": [
+    {
+      "inStock": true,
+      "name": "Organic Cotton T-Shirt",
+      "price": 24.99,
+    },
+    {
+      "inStock": true,
+      "name": "Canvas Backpack",
+      "price": 49.99,
+    },
+  ],
+  "Electronics": [
+    {
+      "inStock": true,
+      "name": "Wireless Bluetooth Headphones",
+      "price": 79.99,
+    },
+    {
+      "inStock": true,
+      "name": "Smartphone Stand",
+      "price": 12.99,
+    },
+    {
+      "inStock": false,
+      "name": "LED Desk Lamp",
+      "price": 34.99,
+    },
+    {
+      "inStock": true,
+      "name": "Bluetooth Speaker",
+      "price": 59.99,
+    },
+  ],
+  "Home & Kitchen": [
+    {
+      "inStock": false,
+      "name": "Stainless Steel Water Bottle",
+      "price": 19.99,
+    },
+    {
+      "inStock": true,
+      "name": "Coffee Mug Set",
+      "price": 29.99,
+    },
+  ],
+  "Sports & Outdoors": [
+    {
+      "inStock": true,
+      "name": "Yoga Mat Premium",
+      "price": 45,
+    },
+    {
+      "inStock": true,
+      "name": "Running Shoes",
+      "price": 89.99,
+    },
+  ],
+}
+`;

@@ -25,7 +25,7 @@
     "@testing-library/react": "^16.3.2",
     "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
-    "firebase": "^12.15.0",
+    "firebase": "^12.16.0",
     "firebase-admin": "12.7.0",
     "googleapis": "^172.0.0",
     "jq": "^1.7.2",

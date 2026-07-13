@@ -67,11 +67,14 @@ describe('Firebase Admin', () => {
         envMocks: Record<string, string | undefined>,
     ) => {
         jest.resetModules();
-        // Set environment variables directly
+        // Set environment variables directly, but preserve any existing runtime
+        // process.env values when the mock entry is intentionally blank.
         Object.keys(envMocks).forEach(key => {
-            if (envMocks[key] !== undefined) {
-                process.env[key] = envMocks[key] as string;
+            const value = envMocks[key];
+            if (value === undefined || value === '') {
+                return;
             }
+            process.env[key] = value as string;
         });
         // Import the module fresh
         const importedModule = await import('../admin');
@@ -100,7 +103,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -120,7 +123,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: './service-account.json',
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -144,7 +147,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -169,7 +172,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -194,7 +197,7 @@ describe('Firebase Admin', () => {
             await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -215,7 +218,7 @@ describe('Firebase Admin', () => {
             await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -235,7 +238,7 @@ describe('Firebase Admin', () => {
             await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -246,13 +249,33 @@ describe('Firebase Admin', () => {
     });
 
     describe('Environment variable fallback', () => {
+        it('should prefer application default credentials when configured', async () => {
+            const mockCredential = { source: 'application-default' };
+            (applicationDefault as jest.Mock).mockReturnValue(mockCredential);
+
+            await importWithEnv({
+                GOOGLE_APPLICATION_CREDENTIALS: './service-account.json',
+                FIREBASE_PRIVATE_KEY: '',
+                FIREBASE_PROJECT_ID: '',
+                FIREBASE_CLIENT_EMAIL: '',
+                NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
+                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
+            });
+
+            expect(applicationDefault).toHaveBeenCalled();
+            expect(cert).not.toHaveBeenCalled();
+            expect(initializeApp).toHaveBeenCalledWith({
+                credential: mockCredential,
+            });
+        });
+
         it('should use individual environment variables when FIREBASE_PRIVATE_KEY is not set', async () => {
             (cert as jest.Mock).mockReturnValue({});
 
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: 'env-project-id',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: 'env@example.com',
+                FIREBASE_CLIENT_EMAIL: 'env@example.com',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: 'env-private-key',
                 NEXT_PUBLIC_FIREBASE_API_KEY: 'env-api-key',
             });
@@ -267,7 +290,7 @@ describe('Firebase Admin', () => {
 
         it('should use process.env as fallback when config values are not set', async () => {
             // Set process.env values directly
-            process.env.FIREBASE_PROJECT_ID = 'process-project-id';
+            process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID = 'process-project-id';
             process.env.FIREBASE_CLIENT_EMAIL = 'process@example.com';
             process.env.FIREBASE_PRIVATE_KEY = 'process-private-key';
 
@@ -275,8 +298,8 @@ describe('Firebase Admin', () => {
 
             const { adminAuth } = await importWithEnv({
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
-                NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
+                FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
 
@@ -294,7 +317,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -321,7 +344,7 @@ describe('Firebase Admin', () => {
                     private_key: 'test-key',
                 }),
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -344,7 +367,7 @@ describe('Firebase Admin', () => {
                     private_key: 'test-key',
                 }),
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -367,7 +390,7 @@ describe('Firebase Admin', () => {
                     private_key: 'test-key',
                 }),
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -393,7 +416,7 @@ describe('Firebase Admin', () => {
                     private_key: 'test-key',
                 }),
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -415,7 +438,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -440,7 +463,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -465,7 +488,7 @@ describe('Firebase Admin', () => {
             const { adminAuth } = await importWithEnv({
                 FIREBASE_PRIVATE_KEY: mockJson,
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
@@ -492,7 +515,7 @@ describe('Firebase Admin', () => {
                     private_key: 'test-key',
                 }),
                 NEXT_PUBLIC_FIREBASE_PROJECT_ID: '',
-                NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: '',
+                FIREBASE_CLIENT_EMAIL: '',
                 NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: '',
                 NEXT_PUBLIC_FIREBASE_API_KEY: '',
             });
