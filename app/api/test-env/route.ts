@@ -1,11 +1,14 @@
 // app/api/test-env/route.ts
 // firebase diagnostic
 import { NextResponse } from 'next/server';
-import { FIREBASE_PRIVATE_KEY } from '@/config/env.server';
+
 import { NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  FIREBASE_CLIENT_EMAIL,
   NEXT_PUBLIC_FIREBASE_API_KEY
 } from '@/config/env.client';
+import {
+  FIREBASE_CLIENT_EMAIL,
+  FIREBASE_PRIVATE_KEY
+} from '@/config/env.server';
 export async function GET() {
   const envCheck = {
     NEXT_PUBLIC_FIREBASE_PROJECT_ID: NEXT_PUBLIC_FIREBASE_PROJECT_ID ? '✅' : '❌',

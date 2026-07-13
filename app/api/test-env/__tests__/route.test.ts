@@ -49,10 +49,10 @@ const getRouteWithEnv = async (envMocks: FirebaseEnvMocks): Promise<GetHandler> 
     jest.resetModules();
     jest.doMock('@/config/env.server', () => ({
         FIREBASE_PRIVATE_KEY: envMocks.FIREBASE_PRIVATE_KEY,
+        FIREBASE_CLIENT_EMAIL: envMocks.FIREBASE_CLIENT_EMAIL,
     }));
     jest.doMock('@/config/env.client', () => ({
         NEXT_PUBLIC_FIREBASE_PROJECT_ID: envMocks.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        FIREBASE_CLIENT_EMAIL: envMocks.FIREBASE_CLIENT_EMAIL,
         NEXT_PUBLIC_FIREBASE_API_KEY: envMocks.NEXT_PUBLIC_FIREBASE_API_KEY,
     }));
 
