@@ -44,3 +44,7 @@ docker run -p 3000:3000 my-app
 | (custom) | `yarn playwright show-report` | View test report |
 | (custom) | `yarn playwright codegen` | Record a test by interacting |
 | (custom) | `yarn create playwright` | Install Playwright |
+
+
+# Codex usage limit problemd
+https://platform.openai.com/settings/organization/billing/overview
