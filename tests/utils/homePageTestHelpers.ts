@@ -32,12 +32,11 @@ export class HomePage {
 
     // Actions
     async navigate() {
-        await this.page.goto('/');
+        await this.page.goto('/', { waitUntil: 'domcontentloaded' });
     }
 
     async waitForPageLoad() {
-        await this.page.waitForLoadState('networkidle');
-        await this.page.waitForLoadState('domcontentloaded');
+        await expect(this.heading).toBeVisible();
     }
 
     // Assertions

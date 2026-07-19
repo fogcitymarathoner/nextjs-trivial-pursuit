@@ -1,5 +1,5 @@
 // e2e/app/page.spec.ts with Page Object Model
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../fixtures';
 import { HomePage } from '../utils/homePageTestHelpers';
 
 test.describe('Home Page - POM', () => {
@@ -17,7 +17,7 @@ test.describe('Home Page - POM', () => {
         await homePage.verifyPanelClasses();
     });
 
-    test('should have correct body copy', async ({ page }) => {
+    test('should have correct body copy', async () => {
         const text = await homePage.bodyCopy.textContent();
         expect(text).toContain('Use these global page, panel, form, and content classes');
     });

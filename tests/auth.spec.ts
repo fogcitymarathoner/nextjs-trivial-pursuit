@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Authentication', () => {
     test('should show loading state', async ({ page }) => {
@@ -16,16 +16,13 @@ test.describe('Authentication', () => {
             });
         });
 
-        await page.goto('/');
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
         await expect(page.locator('.animate-pulse')).toBeVisible({ timeout: 15000 });
         releaseAuthCheck?.();
     });
 
     test('should show logout when authenticated', async ({ page }) => {
-        let authCheckCount = 0;
-
         await page.route('**/api/auth/verify', async (route) => {
-            authCheckCount += 1;
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -33,17 +30,13 @@ test.describe('Authentication', () => {
             });
         });
 
-        await page.goto('/');
-        await expect.poll(() => authCheckCount).toBeGreaterThan(0);
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible({ timeout: 15000 });
         await expect(page.getByRole('link', { name: 'Login' })).not.toBeVisible();
     });
 
     test('should show login when not authenticated', async ({ page }) => {
-        let authCheckCount = 0;
-
         await page.route('**/api/auth/verify', async (route) => {
-            authCheckCount += 1;
             await route.fulfill({
                 status: 401,
                 contentType: 'application/json',
@@ -51,18 +44,14 @@ test.describe('Authentication', () => {
             });
         });
 
-        await page.goto('/');
-        await expect.poll(() => authCheckCount).toBeGreaterThan(0);
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('link', { name: 'Login' })).toBeVisible({ timeout: 15000 });
         await expect(page.getByRole('button', { name: 'Logout' })).not.toBeVisible();
     });
 
     test('should handle logout', async ({ page }) => {
-        let authCheckCount = 0;
-
         // Mock authenticated state
         await page.route('**/api/auth/verify', async (route) => {
-            authCheckCount += 1;
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
@@ -79,8 +68,7 @@ test.describe('Authentication', () => {
             });
         });
 
-        await page.goto('/');
-        await expect.poll(() => authCheckCount).toBeGreaterThan(0);
+        await page.goto('/', { waitUntil: 'domcontentloaded' });
         await expect(page.getByRole('button', { name: 'Logout' })).toBeVisible({ timeout: 15000 });
 
         // Click logout

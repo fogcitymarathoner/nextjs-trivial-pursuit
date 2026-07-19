@@ -732,3 +732,23 @@ samp {
     transform: rotate(360deg);
   }
 }
+/* ============================================
+   APP LINK/BUTTON CLASSES (Simplified)
+   ============================================ */
+
+/* For the block-style gray button */
+.app-link-block {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-control);
+  padding: 0.5rem 1rem;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 150ms ease;
+}
+
+.app-link-block:hover {
+  background: var(--border-subtle);
+}

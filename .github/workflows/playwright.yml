@@ -9,16 +9,19 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout pushed commit or PR merge result
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.sha }}
       - uses: actions/setup-node@v4
         with:
-          node-version: lts/*
+          node-version: '22'
       - name: Install dependencies
         run: yarn install
       - name: Install Playwright Browsers
         run: yarn playwright install --with-deps
-      - name: Run Playwright tests
-        run: yarn playwright test
+      - name: Run Playwright tests with coverage thresholds
+        run: yarn test:e2e:coverage
         env:
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: NEXT_PUBLIC_FIREBASE_PROJECT_ID
           NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL
@@ -28,5 +31,7 @@ jobs:
         if: always()
         with:
           name: playwright-report
-          path: playwright-report/
+          path: |
+            playwright-report/
+            coverage/playwright/
           retention-days: 30

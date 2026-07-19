@@ -16,8 +16,6 @@ yarn-error.log*
 .next/*
 credentials/
 garb.ps1
-.jest-cache/
-coverage/
 dist/
 Microsoft/
 tmp
@@ -37,3 +35,22 @@ node_modules/
 /playwright/.auth/
 .env.example
 /reports/
+
+# .gitignore
+# Coverage directories
+coverage/
+coverage/jest/
+coverage/playwright/
+
+# Test results
+test-results/
+test-results/jest/
+test-results/playwright/
+
+# Playwright
+playwright-report/
+playwright-coverage.json
+.nyc_output/
+
+# Jest
+.jest-cache/
