@@ -1,11 +1,11 @@
 'use client';
-
+// components/product/ProductListDiagnostics.tsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { collection, getDocs, onSnapshot, clearIndexedDbPersistence, terminate } from 'firebase/firestore';
-import { db, app } from '../lib/firebase/client';
-import { productService } from '../lib/firestore/firestore-service';
-import { Product } from '../lib/firestore/types';
-import { firebaseConfig, firestoreDatabaseId } from '../lib/firebase/config';
+import { db, app } from '../../lib/firebase/client';
+import { productService } from '../../lib/firestore/productService';
+import { Product } from '../../lib/firestore/productTypes';
+import { firebaseConfig, firestoreDatabaseId } from '../../lib/firebase/config';
 
 interface DiagnosticInfo {
     environment: string;
@@ -65,7 +65,7 @@ export const ProductListDiagnostics: React.FC = () => {
     const loadDiagnostics = useCallback(async () => {
         try {
             setLoading(true);
-            addLog('🔍 Starting diagnostics...');
+            addLog('🔍 Starting firebase_diagnostics...');
             
             // Basic environment info
             const envInfo = {
@@ -157,7 +157,7 @@ export const ProductListDiagnostics: React.FC = () => {
         };
     }, []);
 
-    // Load diagnostics on mount and when real-time products change
+    // Load firebase_diagnostics on mount and when real-time products change
     useEffect(() => {
         // Defer the call to avoid synchronous setState
         const timer = setTimeout(() => {

@@ -1,5 +1,5 @@
-// lib/firestore/__tests__/firestore-service.integration.test.ts
-import type { User } from '../types';
+// lib/firestore/__tests__/productService.integration.test.ts
+import type { User } from '../productTypes';
 
 describe('Firestore Service Integration Tests', () => {
     // The browser SDK requires both values. Firebase Admin configuration alone
@@ -12,7 +12,7 @@ describe('Firestore Service Integration Tests', () => {
     const describeOrSkip = shouldRunIntegration ? describe : describe.skip;
 
     describeOrSkip('Real Firebase Operations', () => {
-        type FirestoreServices = typeof import('../firestore-service');
+        type FirestoreServices = typeof import('../productService');
         let firestoreService: FirestoreServices['firestoreService'];
         let userService: FirestoreServices['userService'];
         let productService: FirestoreServices['productService'];
@@ -21,7 +21,7 @@ describe('Firestore Service Integration Tests', () => {
         const testId = `test-${Date.now()}`;
 
         beforeAll(async () => {
-            ({ firestoreService, userService, productService } = await import('../firestore-service'));
+            ({ firestoreService, userService, productService } = await import('../productService'));
         });
 
         afterAll(async () => {

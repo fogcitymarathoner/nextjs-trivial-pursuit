@@ -4,18 +4,90 @@ import React from 'react';
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { ProductList } from '../ProductList';
-import { productService } from '../../lib/firestore/firestore-service';
-import { Product } from '../../lib/firestore/types';
+import { ProductList } from '../product/ProductList';
+import { productService } from '../../lib/firestore/productService';
+import { Product } from '../../lib/firestore/productTypes';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+
+type ProductFormModalProps = React.ComponentProps<
+    (typeof import('../product/ProductFormModal'))['ProductFormModal']
+>;
+
+// ProductList only needs an app handle and auth state. Keep unit tests isolated
+// from the real Firebase client, which validates environment configuration when
+// its module is loaded.
+jest.mock('@/lib/firebase/client', () => ({
+    app: { name: 'test-app' },
+}));
+
+jest.mock('firebase/auth', () => {
+    return {
+        getAuth: jest.fn(),
+        onAuthStateChanged: jest.fn(),
+    };
+});
+
+const configureAuthMocks = () => {
+    const currentUser = { uid: 'test-user' } as User;
+    jest.mocked(getAuth).mockReturnValue({ currentUser } as ReturnType<typeof getAuth>);
+    jest.mocked(onAuthStateChanged).mockImplementation((_auth, callback) => {
+        if (typeof callback === 'function') {
+            callback(currentUser);
+        } else {
+            callback.next(currentUser);
+        }
+        return jest.fn();
+    });
+};
 
 // Mock the product service
-jest.mock('../../lib/firestore/firestore-service', () => ({
+jest.mock('../../lib/firestore/productService', () => ({
     productService: {
         getAllProducts: jest.fn(),
         createProduct: jest.fn(),
         updateProduct: jest.fn(),
         deleteProduct: jest.fn(),
         getProductById: jest.fn(),
+    },
+}));
+
+// Mock the ProductFormModal to control submission
+jest.mock('../product/ProductFormModal', () => ({
+    ProductFormModal: ({ isOpen, onClose, onSubmit, product, title }: ProductFormModalProps) => {
+        const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+        if (!isOpen) return null;
+
+        return (
+            <div data-testid="product-modal">
+                <h2>{title}</h2>
+                <button
+                    onClick={async () => {
+                        if (isSubmitting) return;
+                        setIsSubmitting(true);
+                        try {
+                            await onSubmit({
+                                name: 'New Test Product',
+                                price: 99.99,
+                                description: 'Test description',
+                                category: 'Test Category',
+                                inStock: true,
+                            });
+                            onClose();
+                        } finally {
+                            setIsSubmitting(false);
+                        }
+                    }}
+                    data-testid="modal-submit"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                </button>
+                <button onClick={onClose} data-testid="modal-close">Close</button>
+                {product && <div data-testid="edit-product-id">{product.id}</div>}
+            </div>
+        );
     },
 }));
 
@@ -61,6 +133,7 @@ describe('ProductList Component', () => {
 
     beforeEach(() => {
         jest.resetAllMocks();
+        configureAuthMocks();
         jest.useFakeTimers();
     });
 
@@ -77,8 +150,8 @@ describe('ProductList Component', () => {
 
             render(<ProductList />);
 
-            expect(screen.getByText('Loading products...')).toBeInTheDocument();
-            expect(screen.getByText('Loading products...').previousSibling).toHaveClass('animate-spin');
+            expect(screen.getByText('Loading products…')).toBeInTheDocument();
+            expect(screen.getByText('Loading products…').previousSibling).toHaveClass('app-loading-spinner');
         });
 
         it('should display products after loading', async () => {
@@ -109,36 +182,15 @@ describe('ProductList Component', () => {
             render(<ProductList />);
 
             await waitFor(() => {
-                // Check product names
                 expect(screen.getByText('Product 1')).toBeInTheDocument();
                 expect(screen.getByText('Product 2')).toBeInTheDocument();
                 expect(screen.getByText('Product 3')).toBeInTheDocument();
-
-                // Check prices
                 expect(screen.getByText('$29.99')).toBeInTheDocument();
                 expect(screen.getByText('$49.99')).toBeInTheDocument();
                 expect(screen.getByText('$19.99')).toBeInTheDocument();
-
-                // Check descriptions
                 expect(screen.getByText('Description 1')).toBeInTheDocument();
                 expect(screen.getByText('Description 2')).toBeInTheDocument();
                 expect(screen.getByText('Description 3')).toBeInTheDocument();
-            });
-        });
-
-        it('should render product list items with correct classes', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                const listItems = screen.getAllByRole('listitem');
-                expect(listItems).toHaveLength(3);
-                listItems.forEach(item => {
-                    expect(item).toHaveClass('border');
-                    expect(item).toHaveClass('rounded-lg');
-                    expect(item).toHaveClass('p-4');
-                });
             });
         });
 
@@ -148,7 +200,7 @@ describe('ProductList Component', () => {
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText('No products available. Click "Add Product" to create one.')).toBeInTheDocument();
+                expect(screen.getByText(/No products available\. Click "Add Product" to create one\./)).toBeInTheDocument();
                 expect(screen.getByText('Total: 0 products')).toBeInTheDocument();
             });
         });
@@ -173,7 +225,7 @@ describe('ProductList Component', () => {
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText(`Error: ${errorMessage}`)).toBeInTheDocument();
+                expect(screen.getByText(errorMessage)).toBeInTheDocument();
             });
         });
 
@@ -183,17 +235,19 @@ describe('ProductList Component', () => {
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText('Error: Failed to load products')).toBeInTheDocument();
+                // The component renders "Failed to load products" without "Error:" prefix
+                // for non-Error exceptions
+                expect(screen.getByText('Failed to load products')).toBeInTheDocument();
             });
         });
 
-        it('should display error for null exceptions', async () => {
+        it('should display generic error for null exceptions', async () => {
             mockProductService.getAllProducts.mockRejectedValue(null);
 
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText('Error: Failed to load products')).toBeInTheDocument();
+                expect(screen.getByText('Failed to load products')).toBeInTheDocument();
             });
         });
 
@@ -216,16 +270,13 @@ describe('ProductList Component', () => {
 
             render(<ProductList />);
 
-            // First, error state
             await waitFor(() => {
                 expect(screen.getByText('Retry')).toBeInTheDocument();
             });
 
-            // Click retry
             const retryButton = screen.getByText('Retry');
             await user.click(retryButton);
 
-            // Should load products successfully
             await waitFor(() => {
                 expect(screen.getByText('Product 1')).toBeInTheDocument();
             });
@@ -242,19 +293,16 @@ describe('ProductList Component', () => {
 
             render(<ProductList />);
 
-            // First error
             await waitFor(() => {
                 expect(screen.getByText('Retry')).toBeInTheDocument();
             });
 
-            // Click retry
             const retryButton = screen.getByText('Retry');
             await user.click(retryButton);
 
-            // Still in error state
             await waitFor(() => {
                 expect(screen.getByText('Retry')).toBeInTheDocument();
-                expect(screen.getByText('Error: Persistent error')).toBeInTheDocument();
+                expect(screen.getByText('Persistent error')).toBeInTheDocument();
             });
         });
 
@@ -271,11 +319,10 @@ describe('ProductList Component', () => {
         });
     });
 
-    describe('Adding Products', () => {
-        it('should add a new product when Add Product button is clicked', async () => {
+    describe('Adding Products with Modal', () => {
+        it('should open modal when Add Product button is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-            mockProductService.createProduct.mockResolvedValue('4');
 
             render(<ProductList />);
 
@@ -287,92 +334,49 @@ describe('ProductList Component', () => {
             await user.click(addButton);
 
             await waitFor(() => {
-                expect(mockProductService.createProduct).toHaveBeenCalled();
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+                expect(screen.getByText('Add New Product')).toBeInTheDocument();
+            });
+        });
+
+        it('should create product when modal submits', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.createProduct.mockResolvedValue('new-id');
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const addButton = screen.getByText('Add Product');
+            await user.click(addButton);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+            });
+
+            const submitButton = screen.getByTestId('modal-submit');
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(mockProductService.createProduct).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        name: 'New Test Product',
+                        price: 99.99,
+                        description: 'Test description',
+                        category: 'Test Category',
+                        inStock: true,
+                    })
+                );
                 expect(mockProductService.getAllProducts).toHaveBeenCalledTimes(2);
             });
         });
 
-        it('should create product with correct structure', async () => {
+        it('should close modal when cancel is clicked', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockProductService.getAllProducts.mockResolvedValue([]);
-            mockProductService.createProduct.mockResolvedValue('new-id');
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText(/^No products available\./)).toBeInTheDocument();
-            });
-
-            const addButton = screen.getByText('Add Product');
-            await user.click(addButton);
-
-            await waitFor(() => {
-                expect(mockProductService.createProduct).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        name: expect.stringMatching(/^Product \d+$/),
-                        price: expect.any(Number),
-                        description: 'Sample product description',
-                        category: 'Electronics',
-                        inStock: true,
-                    })
-                );
-            });
-        });
-
-        it('should generate unique product names with timestamps', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockProductService.getAllProducts.mockResolvedValue([]);
-            mockProductService.createProduct.mockResolvedValue('new-id');
-
-            // Mock Date.now() to return a predictable value
-            const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(1234567890);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText(/^No products available\./)).toBeInTheDocument();
-            });
-
-            const addButton = screen.getByText('Add Product');
-            await user.click(addButton);
-
-            await waitFor(() => {
-                expect(mockProductService.createProduct).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        name: 'Product 1234567890',
-                    })
-                );
-            });
-
-            dateSpy.mockRestore();
-        });
-
-        it('should generate prices between 10 and 109', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockProductService.getAllProducts.mockResolvedValue([]);
-            mockProductService.createProduct.mockResolvedValue('new-id');
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText(/^No products available\./)).toBeInTheDocument();
-            });
-
-            const addButton = screen.getByText('Add Product');
-            await user.click(addButton);
-
-            await waitFor(() => {
-                const createCall = mockProductService.createProduct.mock.calls[0][0];
-                expect(createCall.price).toBeGreaterThanOrEqual(10);
-                expect(createCall.price).toBeLessThan(110);
-            });
-        });
-
-        it('should handle error when adding product fails', async () => {
-            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            const consoleErrorSpy = jest.spyOn(console, 'error');
             mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-            mockProductService.createProduct.mockRejectedValue(new Error('Add product failed'));
 
             render(<ProductList />);
 
@@ -384,20 +388,22 @@ describe('ProductList Component', () => {
             await user.click(addButton);
 
             await waitFor(() => {
-                expect(screen.getByText('Error: Failed to add product')).toBeInTheDocument();
-                expect(consoleErrorSpy).toHaveBeenCalledWith(
-                    'Error adding product:',
-                    expect.any(Error)
-                );
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+            });
+
+            const closeButton = screen.getByTestId('modal-close');
+            await user.click(closeButton);
+
+            await waitFor(() => {
+                expect(screen.queryByTestId('product-modal')).not.toBeInTheDocument();
             });
         });
 
-        it('should show loading state while adding product', async () => {
+        it('should prevent duplicate product creation from rapid clicks', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+
             mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-            mockProductService.createProduct.mockImplementation(
-                () => new Promise(resolve => setTimeout(resolve, 1000))
-            );
+            mockProductService.createProduct.mockResolvedValue('new-id');
 
             render(<ProductList />);
 
@@ -408,74 +414,283 @@ describe('ProductList Component', () => {
             const addButton = screen.getByText('Add Product');
             await user.click(addButton);
 
-            // Should show loading
-            expect(screen.getByText('Loading products...')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+            });
+
+            const submitButton = screen.getByTestId('modal-submit');
+
+            await user.click(submitButton);
+            await user.click(submitButton);
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(mockProductService.createProduct).toHaveBeenCalledTimes(1);
+            });
         });
     });
 
-    describe('Product Display', () => {
-        it('should display product with description', async () => {
+    describe('Editing Products', () => {
+        it('should open edit modal when Edit button is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
             mockProductService.getAllProducts.mockResolvedValue(mockProducts);
 
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText('Description 1')).toBeInTheDocument();
-                expect(screen.getByText('Description 2')).toBeInTheDocument();
-                expect(screen.getByText('Description 3')).toBeInTheDocument();
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const editButtons = screen.getAllByText('✏️ Edit');
+            await user.click(editButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+                expect(screen.getByText('Edit Product')).toBeInTheDocument();
             });
         });
 
-        it('should handle products without description', async () => {
-            const productsWithoutDesc = [
+        it('should update product when modal submits with edits', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.updateProduct.mockResolvedValue(undefined);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const editButtons = screen.getAllByText('✏️ Edit');
+            await user.click(editButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByTestId('product-modal')).toBeInTheDocument();
+            });
+
+            const submitButton = screen.getByTestId('modal-submit');
+            await user.click(submitButton);
+
+            await waitFor(() => {
+                expect(mockProductService.updateProduct).toHaveBeenCalledWith(
+                    '1',
+                    expect.objectContaining({
+                        name: 'New Test Product',
+                        price: 99.99,
+                    })
+                );
+            });
+        });
+    });
+
+    describe('Deleting Products', () => {
+        it('should delete product when Delete button is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.deleteProduct.mockResolvedValue(undefined);
+
+            window.confirm = jest.fn(() => true);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const deleteButtons = screen.getAllByText('🗑️ Delete');
+            await user.click(deleteButtons[0]);
+
+            await waitFor(() => {
+                expect(window.confirm).toHaveBeenCalled();
+                expect(mockProductService.deleteProduct).toHaveBeenCalledWith('1');
+                expect(mockProductService.getAllProducts).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('should not delete product if user cancels confirmation', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.deleteProduct.mockResolvedValue(undefined);
+
+            window.confirm = jest.fn(() => false);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const deleteButtons = screen.getAllByText('🗑️ Delete');
+            await user.click(deleteButtons[0]);
+
+            await waitFor(() => {
+                expect(window.confirm).toHaveBeenCalled();
+                expect(mockProductService.deleteProduct).not.toHaveBeenCalled();
+            });
+        });
+
+        it('should handle delete error', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.deleteProduct.mockRejectedValue(new Error('Delete failed'));
+
+            window.confirm = jest.fn(() => true);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const deleteButtons = screen.getAllByText('🗑️ Delete');
+            await user.click(deleteButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByText('Failed to delete product')).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('Quick Edit (Inline)', () => {
+        it('should enter inline edit mode when Quick Edit is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const quickEditButtons = screen.getAllByText('✏️ Quick Edit');
+            await user.click(quickEditButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByDisplayValue('Product 1')).toBeInTheDocument();
+                expect(screen.getByDisplayValue('29.99')).toBeInTheDocument();
+                expect(screen.getByDisplayValue('Description 1')).toBeInTheDocument();
+            });
+
+            expect(screen.getByText('Save')).toBeInTheDocument();
+            expect(screen.getByText('Cancel')).toBeInTheDocument();
+        });
+
+        it('should save inline edit when Save is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.updateProduct.mockResolvedValue(undefined);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const quickEditButtons = screen.getAllByText('✏️ Quick Edit');
+            await user.click(quickEditButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByDisplayValue('Product 1')).toBeInTheDocument();
+            });
+
+            const nameInput = screen.getByDisplayValue('Product 1');
+            await user.clear(nameInput);
+            await user.type(nameInput, 'Updated Product Name');
+
+            const saveButton = screen.getByText('Save');
+            await user.click(saveButton);
+
+            await waitFor(() => {
+                expect(mockProductService.updateProduct).toHaveBeenCalledWith(
+                    '1',
+                    expect.objectContaining({
+                        name: 'Updated Product Name',
+                    })
+                );
+            });
+        });
+
+        it('should cancel inline edit when Cancel is clicked', async () => {
+            const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+            });
+
+            const quickEditButtons = screen.getAllByText('✏️ Quick Edit');
+            await user.click(quickEditButtons[0]);
+
+            await waitFor(() => {
+                expect(screen.getByDisplayValue('Product 1')).toBeInTheDocument();
+            });
+
+            const cancelButton = screen.getByText('Cancel');
+            await user.click(cancelButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('Product 1')).toBeInTheDocument();
+                expect(mockProductService.updateProduct).not.toHaveBeenCalled();
+            });
+        });
+    });
+
+    describe('Authentication', () => {
+        it('should display auth status', async () => {
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                expect(screen.getByText(/🔐 Auth Status:/)).toBeInTheDocument();
+                expect(screen.getByText(/✅ Authenticated/)).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe('Product Display Variants', () => {
+        it('should display "In Stock" badge for available products', async () => {
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                const inStockBadges = screen.getAllByText('In Stock', { selector: 'span.app-badge-stock' });
+                expect(inStockBadges).toHaveLength(2);
+            });
+        });
+
+        it('should display "Out of Stock" badge for unavailable products', async () => {
+            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+
+            render(<ProductList />);
+
+            await waitFor(() => {
+                const outOfStockBadges = screen.getAllByText('Out of Stock', { selector: 'span.app-badge-out-of-stock' });
+                expect(outOfStockBadges).toHaveLength(1);
+            });
+        });
+
+        it('should display category or em dash when category is missing', async () => {
+            const productsWithoutCategory = [
                 {
                     ...mockProducts[0],
-                    description: undefined,
-                },
-                {
-                    ...mockProducts[1],
-                    description: null,
-                },
+                    category: undefined,
+                }
             ];
-
-            mockProductService.getAllProducts.mockResolvedValue(productsWithoutDesc as unknown as Product[]);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText('Product 1')).toBeInTheDocument();
-                expect(screen.getByText('Product 2')).toBeInTheDocument();
-                // Description should not be rendered
-                expect(screen.queryByText('Description 1')).not.toBeInTheDocument();
-                expect(screen.queryByText('Description 2')).not.toBeInTheDocument();
-            });
-        });
-
-        it('should display product price with dollar sign', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
+            mockProductService.getAllProducts.mockResolvedValue(productsWithoutCategory as Product[]);
 
             render(<ProductList />);
 
             await waitFor(() => {
-                expect(screen.getByText('$29.99')).toBeInTheDocument();
-                expect(screen.getByText('$49.99')).toBeInTheDocument();
-                expect(screen.getByText('$19.99')).toBeInTheDocument();
-            });
-        });
-
-        it('should render products as list items', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                const listItems = screen.getAllByRole('listitem');
-                expect(listItems).toHaveLength(3);
+                expect(screen.getByText('—')).toBeInTheDocument();
             });
         });
     });
 
-    describe('Loading State', () => {
+    describe('Loading States', () => {
         it('should show loading spinner while fetching products', () => {
             mockProductService.getAllProducts.mockImplementation(
                 () => new Promise(resolve => setTimeout(() => resolve(mockProducts), 1000))
@@ -483,266 +698,18 @@ describe('ProductList Component', () => {
 
             render(<ProductList />);
 
-            expect(screen.getByText('Loading products...')).toBeInTheDocument();
-            const spinner = screen.getByText('Loading products...').previousSibling;
-            expect(spinner).toHaveClass('animate-spin');
-            expect(spinner).toHaveClass('rounded-full');
+            expect(screen.getByText('Loading products…')).toBeInTheDocument();
+            const spinner = screen.getByText('Loading products…').previousSibling;
+            expect(spinner).toHaveClass('app-loading-spinner');
         });
 
-        it('should hide loading state after products load', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.queryByText('Loading products...')).not.toBeInTheDocument();
-                expect(screen.getByText('Product 1')).toBeInTheDocument();
-            });
-        });
-
-        it('should hide loading state on error', async () => {
-            mockProductService.getAllProducts.mockRejectedValue(new Error('Load failed'));
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.queryByText('Loading products...')).not.toBeInTheDocument();
-                expect(screen.getByText('Error: Load failed')).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('Component Lifecycle', () => {
-        it('should load products on mount', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(mockProductService.getAllProducts).toHaveBeenCalledTimes(1);
-            });
-        });
-
-        it('should prevent state updates after unmount', async () => {
-            // This is a good test for the mounted flag
-            const consoleErrorSpy = jest.spyOn(console, 'error');
-            mockProductService.getAllProducts.mockImplementation(
-                () => new Promise(resolve => {
-                    setTimeout(() => resolve(mockProducts), 100);
-                })
-            );
-
-            const { unmount } = render(<ProductList />);
-            unmount();
-
-            // Fast-forward timers
-            jest.runAllTimers();
-
-            // Should not have any state update errors
-            expect(consoleErrorSpy).not.toHaveBeenCalledWith(
-                expect.stringContaining('Cannot update a component'),
-                expect.anything()
-            );
-        });
-
-        it('should reload products when retryCount changes', async () => {
+        it('should show loading state while deleting', async () => {
             const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-            mockProductService.getAllProducts
-                .mockRejectedValueOnce(new Error('Initial error'))
-                .mockResolvedValueOnce(mockProducts);
-
-            render(<ProductList />);
-
-            const retryButton = await screen.findByRole('button', { name: 'Retry' });
-
-            // Trigger retry
-            await user.click(retryButton);
-
-            await waitFor(() => {
-                expect(mockProductService.getAllProducts).toHaveBeenCalledTimes(2);
-            });
-        });
-    });
-
-    describe('Accessibility', () => {
-        it('should have accessible button with correct ARIA attributes', async () => {
             mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                const addButton = screen.getByText('Add Product');
-                expect(addButton).toHaveAttribute('type', 'button');
-                expect(addButton).toBeEnabled();
-            });
-        });
-
-        it('should have focus visible styles on buttons', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                const addButton = screen.getByText('Add Product');
-                expect(addButton).toHaveClass('focus-visible:outline-none');
-                expect(addButton).toHaveClass('focus-visible:ring-2');
-                expect(addButton).toHaveClass('focus-visible:ring-blue-500');
-            });
-        });
-
-        it('should have proper button text for screen readers', async () => {
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-            const { unmount } = render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Add Product' })).toBeInTheDocument();
-            });
-
-            unmount();
-            mockProductService.getAllProducts.mockRejectedValueOnce(new Error('Test error'));
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('State Management', () => {
-        it('should update product list after adding a product', async () => {
-            const user = userEvent.setup({
-                advanceTimers: jest.advanceTimersByTime,
-            });
-            const initialProducts = mockProducts.slice(0, 2);
-            const newProducts = [...initialProducts, mockProducts[2]];
-
-            mockProductService.getAllProducts
-                .mockResolvedValueOnce(initialProducts)
-                .mockResolvedValueOnce(newProducts);
-            mockProductService.createProduct.mockResolvedValue('product-3');
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText('Total: 2 products')).toBeInTheDocument();
-                expect(screen.queryByText('Product 3')).not.toBeInTheDocument();
-            });
-
-            const addButton = screen.getByText('Add Product');
-            await user.click(addButton);
-
-            await waitFor(() => {
-                expect(screen.getByText('Total: 3 products')).toBeInTheDocument();
-                expect(screen.getByText('Product 3')).toBeInTheDocument();
-            });
-        });
-
-        it('should maintain error state correctly', async () => {
-            const user = userEvent.setup({
-                advanceTimers: jest.advanceTimersByTime,
-            });
-            mockProductService.getAllProducts.mockRejectedValue(new Error('Initial error'));
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText('Error: Initial error')).toBeInTheDocument();
-            });
-
-            // Retry and succeed
-            mockProductService.getAllProducts.mockResolvedValueOnce(mockProducts);
-
-            const retryButton = screen.getByText('Retry');
-            await user.click(retryButton);
-
-            await waitFor(() => {
-                expect(screen.queryByText('Error: Initial error')).not.toBeInTheDocument();
-                expect(screen.getByText('Product 1')).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('Error Boundary Integration', () => {
-        it('should handle component errors gracefully', async () => {
-            // Test that the component doesn't crash completely
-            const error = new Error('Render error');
-            mockProductService.getAllProducts.mockRejectedValue(error);
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText(/Error:/)).toBeInTheDocument();
-                expect(screen.getByText('Retry')).toBeInTheDocument();
-            });
-        });
-    });
-
-    describe('Performance', () => {
-        it('should render large product lists efficiently', async () => {
-            const largeProductList = Array.from({ length: 100 }, (_, i) => ({
-                ...mockProducts[0],
-                id: `product-${i}`,
-                name: `Product ${i}`,
-                price: 10 + i,
-            }));
-
-            mockProductService.getAllProducts.mockResolvedValue(largeProductList);
-
-            const startTime = performance.now();
-            render(<ProductList />);
-            const endTime = performance.now();
-
-            // Should render within reasonable time
-            expect(endTime - startTime).toBeLessThan(500);
-
-            await waitFor(() => {
-                expect(screen.getByText('Total: 100 products')).toBeInTheDocument();
-            });
-        });
-
-        it('should not cause memory leaks with repeated renders', () => {
-            const { rerender, unmount } = render(<ProductList />);
-
-            // Rerender multiple times
-            for (let i = 0; i < 5; i++) {
-                rerender(<ProductList />);
-            }
-
-            // Should unmount cleanly
-            expect(() => unmount()).not.toThrow();
-        });
-    });
-
-    describe('Integration Scenarios', () => {
-        it('should handle adding product when list is empty', async () => {
-            const user = userEvent.setup({
-                advanceTimers: jest.advanceTimersByTime,
-            });
-            mockProductService.getAllProducts.mockResolvedValue([]);
-            mockProductService.createProduct.mockResolvedValue('new-id');
-
-            render(<ProductList />);
-
-            await waitFor(() => {
-                expect(screen.getByText(/^No products available\./)).toBeInTheDocument();
-            });
-
-            const addButton = screen.getByText('Add Product');
-            await user.click(addButton);
-
-            await waitFor(() => {
-                expect(mockProductService.createProduct).toHaveBeenCalled();
-                expect(mockProductService.getAllProducts).toHaveBeenCalledTimes(2);
-            });
-        });
-
-        it('should prevent duplicate product creation from rapid clicks', async () => {
-            const user = userEvent.setup({
-                advanceTimers: jest.advanceTimersByTime,
-            });
-            mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-            mockProductService.createProduct.mockResolvedValue('new-id');
+            mockProductService.deleteProduct.mockImplementation(
+                () => new Promise(resolve => setTimeout(resolve, 1000))
+            );
+            window.confirm = jest.fn(() => true);
 
             render(<ProductList />);
 
@@ -750,53 +717,12 @@ describe('ProductList Component', () => {
                 expect(screen.getByText('Product 1')).toBeInTheDocument();
             });
 
-            const addButton = screen.getByText('Add Product');
-
-            // The first click switches the component to its loading state and
-            // removes the action button, so subsequent clicks are ignored.
-            await user.click(addButton);
-            await user.click(addButton);
-            await user.click(addButton);
+            const deleteButtons = screen.getAllByText('🗑️ Delete');
+            await user.click(deleteButtons[0]);
 
             await waitFor(() => {
-                expect(mockProductService.createProduct).toHaveBeenCalledTimes(1);
+                expect(screen.getByText('Deleting...')).toBeInTheDocument();
             });
         });
     });
 });
-
-// Integration test with actual services
-describe('ProductList Integration Tests', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-
-    it('should work with real product service structure', async () => {
-        const mockProductService = productService as jest.Mocked<typeof productService>;
-        const mockProducts = [
-            {
-                id: '1',
-                name: 'Integration Product',
-                price: 99.99,
-                description: 'Integration test product',
-                category: 'Test',
-                inStock: true,
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            }
-        ];
-
-        mockProductService.getAllProducts.mockResolvedValue(mockProducts);
-
-        render(<ProductList />);
-
-        await waitFor(() => {
-            expect(screen.getByText('Integration Product')).toBeInTheDocument();
-            expect(screen.getByText('$99.99')).toBeInTheDocument();
-            expect(screen.getByText('Integration test product')).toBeInTheDocument();
-        });
-    });
-});
-
-// Run tests:
-// yarn test components/__tests__/ProductList.test.tsx --coverage

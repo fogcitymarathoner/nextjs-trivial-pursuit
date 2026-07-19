@@ -1,14 +1,15 @@
 'use client';
+// app/experiment/products/page.tsx
 // test harness for products lists component
-import {ProductList} from '@/components/ProductList';
-import {testFirebaseConnection} from "@/lib/firebase/test";
-import {useEffect} from 'react';
+import { ProductList } from '@/components/product/ProductList';
+import { testFirebaseConnection } from "@/lib/firebase/test";
+import { useEffect } from 'react';
 
 export default function ProductPage() {
-    // app/page.tsx or wherever
     useEffect(() => {
         testFirebaseConnection();
     }, []);
+
     return (
         <main className="app-page">
             <div className="app-container">
@@ -19,8 +20,9 @@ export default function ProductPage() {
                     </p>
                 </header>
 
-                <section className="surface-panel surface-panel-spacious surface-panel-compact content-stack">
-                    <ProductList/>
+                {/* Removed surface-panel-compact to allow full width */}
+                <section className="surface-panel surface-panel-spacious">
+                    <ProductList />
                 </section>
             </div>
         </main>

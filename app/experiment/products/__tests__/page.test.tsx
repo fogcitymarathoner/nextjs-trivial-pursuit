@@ -1,4 +1,4 @@
-// app/exp5/__tests__/page.test.tsx
+// app/products/__tests__/page.test.tsx
 //
 import '@testing-library/jest-dom';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -11,7 +11,7 @@ jest.mock('@/lib/firebase/test', () => ({
 
 // This suite tests the page integration boundary. Mock ProductList completely so
 // importing the page does not initialize the Firebase browser SDK.
-jest.mock('@/components/ProductList', () => ({
+jest.mock('@/components/product/ProductList', () => ({
     ProductList: jest.fn(() => (
         <div data-testid="product-list-integration">
             <h2>Product List Integration Test</h2>

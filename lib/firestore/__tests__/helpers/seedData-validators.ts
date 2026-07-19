@@ -1,5 +1,5 @@
 // lib/firestore/tests/helpers/seedData-validators.ts
-import { Product } from '../../types';
+import { Product } from '../../productTypes';
 
 export const validateProductData = (
     product: Omit<Product, 'createdAt' | 'updatedAt'>

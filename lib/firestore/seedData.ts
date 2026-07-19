@@ -1,4 +1,4 @@
-import { Product } from './types';
+import { Product } from './productTypes';
 
 export const sampleProducts: Omit<Product, 'createdAt' | 'updatedAt'>[] = [
     {
