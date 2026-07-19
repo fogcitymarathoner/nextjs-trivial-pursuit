@@ -16,12 +16,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'yarn'
 
       - name: Install dependencies
@@ -63,6 +63,27 @@ jobs:
           PINECONE_INDEX: presidents
           CLIENT_SECRET_FILE: xxxxxxx
           CLIENT_SECRET_FILE_FOGCITYMARATHONER_LIST_FILES_2: XXXXXXX
+
+      - name: Install Playwright Chromium
+        run: yarn playwright install --with-deps chromium
+
+      - name: Run Playwright tests with coverage thresholds
+        run: yarn test:e2e:coverage
+        env:
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+          NEXT_PUBLIC_FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
+          NEXT_PUBLIC_FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+
+      - name: Upload Playwright coverage report
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: deploy-playwright-coverage-${{ github.run_id }}
+          path: |
+            coverage/playwright/
+            playwright-report/
+          retention-days: 7
 
       - name: Build Next.js app
         run: yarn build
@@ -121,7 +142,7 @@ jobs:
           fi
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: nextjs-build
           include-hidden-files: true
@@ -141,10 +162,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Download build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: nextjs-build
           path: .
@@ -180,7 +201,7 @@ jobs:
       - name: Create Dockerfile
         run: |
           cat > Dockerfile << 'EOF'
-          FROM node:20-slim
+          FROM node:22-slim
           WORKDIR /app
           ENV NODE_ENV=production
           ENV NEXT_TELEMETRY_DISABLED=1

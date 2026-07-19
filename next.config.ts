@@ -27,7 +27,8 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   compress: true,
-  productionBrowserSourceMaps: false,
+  // Coverage CI needs source maps to remap browser bundles to source files.
+  productionBrowserSourceMaps: process.env.COVERAGE === 'true',
 
   // Next.js 15+ turbopack (replaces webpack in development)
   turbopack: {

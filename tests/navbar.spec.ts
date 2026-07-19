@@ -1,9 +1,10 @@
 // tests/navbar.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import type { Page } from '@playwright/test';
 
 test.describe('NavBar', () => {
     // Helper to set up authentication with proper cookies
-    const setupAuth = async (page: any, authenticated: boolean) => {
+    const setupAuth = async (page: Page, authenticated: boolean) => {
         // Mock the verify endpoint
         await page.route('**/api/auth/verify', async (route) => {
             await route.fulfill({

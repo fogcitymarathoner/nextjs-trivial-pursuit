@@ -1,7 +1,10 @@
 name: Run Jest Tests
 
 on:
-  push:            # works on any local push to origin
+  push:
+  pull_request:
+    branches:
+      - master
 
 env:
   NODE_ENV: test
@@ -15,17 +18,17 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Skip this workflow for pull requests
-    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout pushed commit or PR merge result
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/merge', github.event.pull_request.number) || github.sha }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '26'
+          node-version: '22'
           cache: 'yarn'
 
       - name: Install dependencies
@@ -59,7 +62,7 @@ jobs:
           echo "Artifact name: $NAME"
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: coverage-${{ steps.artifact-name.outputs.name }}-${{ github.run_id }}
@@ -67,7 +70,7 @@ jobs:
           retention-days: 7
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: test-results-${{ steps.artifact-name.outputs.name }}-${{ github.run_id }}

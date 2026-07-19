@@ -1,3 +1,4 @@
+// jest.config.js
 const isFocusedTestRun = process.argv.some((arg) =>
     /(__tests__|\.test\.|\.spec\.)/.test(arg)
 );
@@ -93,7 +94,7 @@ const getReporters = () => {
         return [
             'default',
             ['jest-junit', {
-                outputDirectory: 'test-results',
+                outputDirectory: 'test-results/jest',
                 outputName: 'junit.xml',
                 classNameTemplate: '{classname}',
                 titleTemplate: '{title}',
@@ -101,7 +102,7 @@ const getReporters = () => {
                 usePathForSuiteName: true,
             }],
             ['jest-sonar', {
-                outputDirectory: 'test-results',
+                outputDirectory: 'test-results/jest',
                 outputName: 'sonar-report.xml',
             }],
         ];
@@ -273,7 +274,8 @@ module.exports = {
         "clover",
     ],
 
-    coverageDirectory: "<rootDir>/coverage",
+    // Use coverage/jest instead of coverage
+    coverageDirectory: "<rootDir>/coverage/jest",
     coverageProvider: "v8",
 
     // Coverage thresholds
@@ -353,6 +355,7 @@ if (process.env.DEBUG_JEST === 'true') {
     console.log('📁 Test Match:', module.exports.testMatch);
     console.log('🚫 Test Path Ignore:', module.exports.testPathIgnorePatterns);
     console.log('📊 Collect Coverage:', module.exports.collectCoverage);
+    console.log('📁 Coverage Directory:', module.exports.coverageDirectory);
     console.log('🔄 Run Integration Tests:', runIntegrationTests);
     console.log('💻 CI Mode:', isCI);
     console.log('🎯 Focused Test Run:', isFocusedTestRun);

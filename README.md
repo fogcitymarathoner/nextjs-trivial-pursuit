@@ -12,11 +12,9 @@ User **config/env.ts** to import and check existence of necessary variables
 ```
 import {DEBUG, PINECONE_API_KEY} from "@/src/config/env";
 ```
-# Using NVM with native node intact
-Prepend **C:\Users\marc\AppData\Roaming\nvm\v20.19.0** to system path.
-```
-$env:Path = "C:\Users\marc\AppData\Roaming\nvm\v20.19.0;" + $env:Path
-```
+# node version v22.23.1 current LTS
+
+
 # Running Scripts
 ```angular2html
 npx tsx scripts/my-script.ts
@@ -48,3 +46,6 @@ docker run -p 3000:3000 my-app
 
 # Codex usage limit problemd
 https://platform.openai.com/settings/organization/billing/overview
+
+# Deployment
+https://nextjs-app-1007972461429.us-central1.run.app
