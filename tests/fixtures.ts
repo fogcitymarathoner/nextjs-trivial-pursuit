@@ -147,12 +147,19 @@ async function convertV8ToIstanbul(coverageData: JSCoverage, page: Page): Promis
                 const workspaceIndex = sourcePath.toLowerCase().lastIndexOf(
                     workspacePath.toLowerCase(),
                 );
+                const projectMarker = '[project]/';
+                const projectIndex = sourcePath.toLowerCase().lastIndexOf(projectMarker);
 
-                if (workspaceIndex === -1) {
+                if (workspaceIndex === -1 && projectIndex === -1) {
                     continue;
                 }
 
-                const normalizedPath = path.normalize(sourcePath.slice(workspaceIndex));
+                const normalizedPath = projectIndex !== -1
+                    ? path.join(
+                        path.resolve('.'),
+                        sourcePath.slice(projectIndex + projectMarker.length),
+                    )
+                    : path.normalize(sourcePath.slice(workspaceIndex));
                 result.addFileCoverage({
                     ...fileCoverage,
                     path: normalizedPath,
