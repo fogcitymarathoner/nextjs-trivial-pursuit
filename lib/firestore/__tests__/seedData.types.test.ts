@@ -1,6 +1,6 @@
 // lib/firestore/tests/seedData.types.test.ts
 import { sampleProducts, sampleCategories } from '../seedData';
-import { Product } from '../types';
+import { Product } from '../productTypes';
 
 describe('Type Safety Tests', () => {
     it('should pass TypeScript type checking for Product type', () => {

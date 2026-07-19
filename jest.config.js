@@ -127,7 +127,7 @@ const getCoverageThreshold = () => {
             statements: 80,
         },
         // Specific thresholds for critical files
-        "./lib/firestore/firestore-service.ts": {
+        "./lib/firestore/productService.ts": {
             branches: 85,
             functions: 90,
             lines: 90,
@@ -257,9 +257,9 @@ module.exports = {
 
         // Exclude types
         '!**/types/**',
-        '!**/types.ts',
+        '!**/productTypes.ts',
         '!**/*Types.ts',
-        '!**/*.types.ts',
+        '!**/*.productTypes.ts',
         '!**/*.interface.ts',
     ],
 

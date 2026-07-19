@@ -1,4 +1,4 @@
-// lib/firestore/tests/helpers/mock-firestore-service.ts
+// lib/firestore/tests/helpers/mock-productService.ts
 /* eslint-disable @typescript-eslint/no-explicit-any -- Firebase SDK test doubles intentionally model overloaded external types. */
 
 /**

@@ -1,6 +1,6 @@
 // lib/firestore/tests/seedData.test.ts
 import { sampleProducts, sampleCategories } from '../seedData';
-import { Product } from '../types';
+import { Product } from '../productTypes';
 
 describe('Seed Data', () => {
     describe('sampleProducts', () => {

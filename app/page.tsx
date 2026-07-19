@@ -1,3 +1,4 @@
+// app/page.tsx
 const Home = () => {
   return (
     <main className="app-page">

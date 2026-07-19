@@ -2,7 +2,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import HomePage from '../exp4/page';
+import HomePage from '../experiment/ui/pinecone-index-selector/page';
 import { PINECONE_INDEXES } from '@/config/pinecone/pinecone_indexes';
 
 // Only mock external dependencies, not the UI components
