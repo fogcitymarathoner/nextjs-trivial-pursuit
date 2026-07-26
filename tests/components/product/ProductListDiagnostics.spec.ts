@@ -31,6 +31,7 @@ test.describe('ProductListDiagnostics', () => {
   });
 
   test('renders diagnostic configuration and read results', async ({ page }) => {
+    await page.route(/firestore\.googleapis\.com/, route => route.abort());
     await page.goto('/troubleshoot/firebase-diagnostics', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: /Firebase Products Diagnostics/ }))
