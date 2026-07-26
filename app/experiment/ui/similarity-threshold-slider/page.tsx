@@ -1,4 +1,5 @@
 'use client';
+// app/experiment/ui/similarity-threshold-slider/page.tsx
 // test harness for similarity threshold selection slider
 import {SimilarityThresholdSlider} from '@/components/similarity-threshold-slider/SimilarityThresholdSlider';
 import {useState} from 'react';

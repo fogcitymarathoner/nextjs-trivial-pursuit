@@ -3,16 +3,19 @@
  */
 
 import { render, screen } from '@testing-library/react';
-import MarcPage from '../page';
+import MarcPage, { metadata } from '../page';
 import '@testing-library/jest-dom';
 
 describe('MarcPage', () => {
   describe('Metadata', () => {
     it('exports correct metadata', () => {
-      const { metadata } = require('../page');
       expect(metadata).toEqual({
         title: 'Marc',
         description: 'Learn about Marc',
+        openGraph: {
+          title: 'Marc',
+          description: 'Learn about Marc',
+        },
       });
     });
   });

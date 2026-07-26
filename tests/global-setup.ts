@@ -1,8 +1,8 @@
+// tests/global-setup.ts
 import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createInstrumenter } from 'istanbul-lib-instrument';
-
-type FileCoverage = Record<string, unknown> & { path: string };
+import type { FileCoverageData } from 'istanbul-lib-coverage';
 
 const sourceDirectories = ['app', 'components', 'hooks', 'lib'];
 const clientDirective = /^\s*["']use client["'];?/m;
@@ -32,7 +32,7 @@ async function findClientModules(directory: string): Promise<string[]> {
 
 async function writeClientCoverageBaseline(outputDirectory: string) {
     const clientFiles = (await Promise.all(sourceDirectories.map(findClientModules))).flat();
-    const baseline: Record<string, FileCoverage> = {};
+    const baseline: Record<string, FileCoverageData> = {};
 
     for (const filename of clientFiles) {
         const instrumenter = createInstrumenter({
@@ -53,7 +53,7 @@ async function writeClientCoverageBaseline(outputDirectory: string) {
 }
 
 export default async function globalSetup() {
-    if (process.env.COVERAGE === 'true') {
+    if (process.env.PLAYWRIGHT_COLLECT_COVERAGE === 'true') {
         const outputDirectory = path.resolve('.nyc_output/playwright');
         await rm(outputDirectory, { recursive: true, force: true });
         await writeClientCoverageBaseline(outputDirectory);

@@ -7,13 +7,24 @@ import { Product } from '../../lib/firestore/productTypes';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { app } from '@/lib/firebase/client';
 import { ProductFormModal } from './ProductFormModal';
+import type { ProductInput, ProductListTestAdapter } from './productListTestAdapter';
+
+const getTestAdapter = (): ProductListTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    ? window.__PRODUCT_LIST_TEST_ADAPTER__
+    : undefined;
 
 export const ProductList: React.FC = () => {
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [retryCount, setRetryCount] = useState(0);
-    const [authStatus, setAuthStatus] = useState<string>('Checking...');
+    const [authStatus, setAuthStatus] = useState<string>(() => {
+        const testAdapter = getTestAdapter();
+        if (!testAdapter) return 'Checking...';
+        return testAdapter.authUserId
+            ? `âœ… Authenticated (${testAdapter.authUserId})`
+            : 'âŒ Not authenticated';
+    });
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editDraft, setEditDraft] = useState<Partial<Product>>({});
@@ -25,6 +36,11 @@ export const ProductList: React.FC = () => {
 
     // Check authentication status
     useEffect(() => {
+        const testAdapter = getTestAdapter();
+        if (testAdapter) {
+            return;
+        }
+
         const auth = getAuth(app);
         const unsubscribe = onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -44,7 +60,8 @@ export const ProductList: React.FC = () => {
             setError(null);
             console.log('🔄 Loading products...');
 
-            const data = await productService.getAllProducts();
+            const data = await (getTestAdapter()?.getAllProducts()
+                ?? productService.getAllProducts());
             setProducts(data);
 
             if (data.length === 0) {
@@ -78,6 +95,15 @@ export const ProductList: React.FC = () => {
     };
 
     const requireAuth = (action: string) => {
+        const testAdapter = getTestAdapter();
+        if (testAdapter) {
+            if (!testAdapter.authUserId) {
+                setError(`You must be logged in to ${action}`);
+                return false;
+            }
+            return true;
+        }
+
         const auth = getAuth(app);
         if (!auth.currentUser) {
             setError(`You must be logged in to ${action}`);
@@ -105,15 +131,17 @@ export const ProductList: React.FC = () => {
         setError(null);
     };
 
-    const handleModalSubmit = async (productData: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const handleModalSubmit = async (productData: ProductInput) => {
         try {
             if (editingProduct) {
                 // Update existing product
-                await productService.updateProduct(editingProduct.id!, productData);
+                await (getTestAdapter()?.updateProduct(editingProduct.id!, productData)
+                    ?? productService.updateProduct(editingProduct.id!, productData));
                 console.log('✅ Product updated successfully');
             } else {
                 // Create new product
-                await productService.createProduct(productData);
+                await (getTestAdapter()?.createProduct(productData)
+                    ?? productService.createProduct(productData));
                 console.log('✅ Product created successfully');
             }
             await loadProducts();
@@ -135,7 +163,8 @@ export const ProductList: React.FC = () => {
             setError(null);
             console.log(`🗑️ Deleting product: ${productId}`);
 
-            await productService.deleteProduct(productId);
+            await (getTestAdapter()?.deleteProduct(productId)
+                ?? productService.deleteProduct(productId));
             await loadProducts();
 
             console.log('✅ Product deleted successfully');
@@ -170,7 +199,8 @@ export const ProductList: React.FC = () => {
         try {
             setSavingId(productId);
             setError(null);
-            await productService.updateProduct(productId, editDraft);
+            await (getTestAdapter()?.updateProduct(productId, editDraft)
+                ?? productService.updateProduct(productId, editDraft));
             await loadProducts();
             setEditingId(null);
             setEditDraft({});

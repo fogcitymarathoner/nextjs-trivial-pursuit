@@ -37,15 +37,18 @@ module.exports = {
         '**/playwright.config.*',
         '**/__mocks__/**',
         '**/mocks/**',
+        // Covered by their Jest service suites, not the browser E2E suite.
+        '**/lib/firestore/productService.ts',
+        '**/lib/firestore/triviaService.ts',
     ],
     reporter: ['lcov', 'html', 'text', 'text-summary', 'json', 'json-summary'],
     reportDir: 'coverage/playwright',
     tempDir: '.nyc_output/playwright',
     watermarks: {
-        lines: [0, 29],
-        functions: [0, 13],
-        branches: [0, 10],
-        statements: [0, 30]
+        lines: [0, 69],
+        functions: [0, 31],
+        branches: [0, 31],
+        statements: [0, 67]
     },
     // Important for Playwright coverage
     instrument: true,
@@ -53,8 +56,8 @@ module.exports = {
     cache: false,
     skipFull: false,
     checkCoverage: true,
-    branches: 10,
-    functions: 13,
-    lines: 29,
-    statements: 30,
+    statements: 38,
+    branches: 32,
+    functions: 30,
+    lines: 41,
 };

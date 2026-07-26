@@ -2413,6 +2413,18 @@
   resolved "https://registry.npmjs.org/@types/aria-query/-/aria-query-5.0.4.tgz"
   integrity sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==
 
+"@types/babel-generator@*":
+  version "6.25.8"
+  resolved "https://registry.yarnpkg.com/@types/babel-generator/-/babel-generator-6.25.8.tgz#44b37bcbcd4b1e24c4e5975fa6d7b72b8c9a456b"
+  integrity sha512-f5l89J0UpYhTE6TFCxy3X+8pJVru1eig1fcvF9qHmOk9h1VxZimd+++tu5GShntCOdhE/MoZZ0SlpGTyh4XrKg==
+  dependencies:
+    "@types/babel-types" "*"
+
+"@types/babel-types@*":
+  version "7.0.16"
+  resolved "https://registry.yarnpkg.com/@types/babel-types/-/babel-types-7.0.16.tgz#74916c1b7a6bd53dc3d3f4053b65126bcc5e8e6f"
+  integrity sha512-5QXs9GBFTNTmilLlWBhnsprqpjfrotyrnzUdwDrywEL/DA4LuCWQT300BTOXA3Y9ngT9F2uvmCoIxI6z8DlJEA==
+
 "@types/babel__core@^7.1.14":
   version "7.20.5"
   resolved "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz"
@@ -2474,6 +2486,16 @@
   version "2.0.6"
   resolved "https://registry.npmjs.org/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.6.tgz"
   integrity sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==
+
+"@types/istanbul-lib-instrument@^1.7.8":
+  version "1.7.8"
+  resolved "https://registry.yarnpkg.com/@types/istanbul-lib-instrument/-/istanbul-lib-instrument-1.7.8.tgz#4e5f6143589dfe3e5aaefdec1037728b6099db7a"
+  integrity sha512-y8t6GUkn5bTXry7Zu/2HjTakxLNtvKbIQnAiGR2M3orrdZF+zp1J9ZAKfj3VM1k3sJodkjEcWfdCJ0bEAKp6CA==
+  dependencies:
+    "@types/babel-generator" "*"
+    "@types/babel-types" "*"
+    "@types/istanbul-lib-coverage" "*"
+    source-map "^0.6.1"
 
 "@types/istanbul-lib-report@*":
   version "3.0.3"

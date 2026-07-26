@@ -1,22 +1,25 @@
 'use client';
-
-import React, { useState } from 'react';
+// app/trivia/page.tsx
+import React from 'react';
 import { useTriviaQuestions } from '../../hooks/useTrivia';
 import { questionService } from '../../lib/firestore/triviaService';
 
 export default function TriviaPage() {
     const { questions, loading, error, refresh } = useTriviaQuestions();
-    const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
-
     const handleAddSampleQuestion = async () => {
         try {
-            await questionService.createQuestion({
+            const questionData = {
                 category: 'Science',
-                difficulty: 'medium',
+                difficulty: 'medium' as const,
                 question: 'What is the chemical symbol for water?',
                 correctAnswer: 'H2O',
                 incorrectAnswers: ['CO2', 'NaCl', 'HCl'],
-            });
+            };
+            const testCreateQuestion = process.env.NODE_ENV !== 'production'
+                ? window.__TRIVIA_HOOK_TEST_ADAPTER__?.createQuestion
+                : undefined;
+            await (testCreateQuestion?.(questionData)
+                ?? questionService.createQuestion(questionData));
             refresh();
         } catch (err) {
             console.error('Error adding question:', err);

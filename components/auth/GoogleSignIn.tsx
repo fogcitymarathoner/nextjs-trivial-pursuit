@@ -5,11 +5,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase/client';
+import type { GoogleSignInTestAdapter } from './googleSignInTestAdapter';
 
 type AuthErrorLike = {
     code?: string;
     message?: string;
 };
+
+const getTestSignIn = (): GoogleSignInTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    ? window.__GOOGLE_SIGN_IN_TEST__
+    : undefined;
 
 const getAuthErrorMessage = (error: unknown) => {
     const authError = error as AuthErrorLike;
@@ -43,11 +48,16 @@ export const GoogleSignIn = () => {
         setError('');
 
         try {
-            const auth = getFirebaseAuth();
-            const provider = new GoogleAuthProvider();
-
-            const result = await signInWithPopup(auth, provider);
-            const idToken = await result.user.getIdToken();
+            const testSignIn = getTestSignIn();
+            let idToken: string;
+            if (testSignIn) {
+                idToken = await testSignIn();
+            } else {
+                const auth = getFirebaseAuth();
+                const provider = new GoogleAuthProvider();
+                const result = await signInWithPopup(auth, provider);
+                idToken = await result.user.getIdToken();
+            }
 
             const response = await fetch('/api/auth/session', {
                 method: 'POST',

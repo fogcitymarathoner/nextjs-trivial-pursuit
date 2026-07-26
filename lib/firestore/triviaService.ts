@@ -1,3 +1,4 @@
+// lib/firestore/triviaService.ts
 import {
     collection,
     doc,

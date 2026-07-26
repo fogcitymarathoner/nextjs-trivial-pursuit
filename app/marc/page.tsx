@@ -1,8 +1,13 @@
+// app\marc\page.tsx
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Marc',
   description: 'Learn about Marc',
+  openGraph: {
+    title: 'Marc',
+    description: 'Learn about Marc',
+  },
 };
 
 const MarcPage = () => {
