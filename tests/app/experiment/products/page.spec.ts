@@ -3,7 +3,6 @@ import type { Page } from '@playwright/test';
 import type { ProductListTestAdapter } from '../../../../components/product/productListTestAdapter';
 
 const route = '/experiment/products';
-const firebaseOutcomeCookie = 'products-firebase-test-outcomes';
 
 type FirebaseTestOutcome = {
     delay?: number;
@@ -12,12 +11,9 @@ type FirebaseTestOutcome = {
 };
 
 async function mockFirebaseConnection(page: Page, outcomes: FirebaseTestOutcome[]) {
-    await page.context().addCookies([{
-        name: firebaseOutcomeCookie,
-        value: encodeURIComponent(JSON.stringify(outcomes)),
-        domain: '127.0.0.1',
-        path: '/',
-    }]);
+    await page.addInitScript((mockOutcomes) => {
+        window.__PRODUCTS_FIREBASE_TEST_OUTCOMES__ = mockOutcomes;
+    }, outcomes);
 }
 
 async function mockProductList(page: Page) {
@@ -33,26 +29,18 @@ async function mockProductList(page: Page) {
     });
 }
 
+async function openProductPage(
+    page: Page,
+    outcomes: FirebaseTestOutcome[] = [{ type: 'resolve' }],
+) {
+    await mockFirebaseConnection(page, outcomes);
+    await mockProductList(page);
+    await page.goto(route, { waitUntil: 'domcontentloaded' });
+}
+
 test.describe('Product Page', () => {
-    test.beforeEach(async ({ page }) => {
-        await page.addInitScript((cookieName) => {
-            const prefix = `${cookieName}=`;
-            const encodedOutcomes = document.cookie
-                .split('; ')
-                .find(cookie => cookie.startsWith(prefix))
-                ?.slice(prefix.length);
-
-            window.__PRODUCTS_FIREBASE_TEST_OUTCOMES__ = encodedOutcomes
-                ? JSON.parse(decodeURIComponent(encodedOutcomes)) as FirebaseTestOutcome[]
-                : [];
-        }, firebaseOutcomeCookie);
-        await mockFirebaseConnection(page, [{ type: 'resolve' }]);
-        await mockProductList(page);
-
-        await page.goto(route, { waitUntil: 'domcontentloaded' });
-    });
-
     test('renders the products page structure', async ({ page }) => {
+        await openProductPage(page);
         const productPage = page.getByTestId('product-page');
 
         await expect(productPage).toBeVisible();
@@ -75,9 +63,7 @@ test.describe('Product Page', () => {
     });
 
     test('displays idle state initially', async ({ page }) => {
-        // Reload the page to see idle state
-        await mockFirebaseConnection(page, [{ type: 'resolve', delay: 10000 }]);
-        await page.reload();
+        await openProductPage(page, [{ type: 'resolve', delay: 10000 }]);
 
         // Check idle state is shown
         await expect(page.getByTestId('connection-idle')).toBeVisible();
@@ -89,9 +75,7 @@ test.describe('Product Page', () => {
     });
 
     test('displays loading state while connecting to Firebase', async ({ page }) => {
-        // Reload to ensure loading state appears
-        await mockFirebaseConnection(page, [{ type: 'resolve', delay: 10000 }]);
-        await page.reload();
+        await openProductPage(page, [{ type: 'resolve', delay: 10000 }]);
 
         // Check loading state
         await expect(page.getByTestId('connection-loading')).toBeVisible();
@@ -102,9 +86,7 @@ test.describe('Product Page', () => {
     });
 
     test('displays ProductList when Firebase connection succeeds', async ({ page }) => {
-        await mockFirebaseConnection(page, [{ type: 'resolve' }]);
-
-        await page.reload();
+        await openProductPage(page);
 
         // Wait for ProductList to appear
         await page.waitForSelector('[data-testid="product-list"]', { timeout: 15000 });
@@ -116,11 +98,9 @@ test.describe('Product Page', () => {
     });
 
     test('displays error state when Firebase connection fails', async ({ page }) => {
-        await mockFirebaseConnection(page, [
+        await openProductPage(page, [
             { type: 'reject', message: 'Firebase connection failed' },
         ]);
-
-        await page.reload();
 
         // Wait for error state
         await page.waitForSelector('[data-testid="connection-error"]', { timeout: 15000 });
@@ -138,9 +118,7 @@ test.describe('Product Page', () => {
     });
 
     test('displays generic error message when error has no message', async ({ page }) => {
-        await mockFirebaseConnection(page, [{ type: 'reject' }]);
-
-        await page.reload();
+        await openProductPage(page, [{ type: 'reject' }]);
 
         // Wait for error state
         await page.waitForSelector('[data-testid="connection-error"]', { timeout: 15000 });
@@ -150,12 +128,10 @@ test.describe('Product Page', () => {
     });
 
     test('retries connection when retry button is clicked', async ({ page }) => {
-        await mockFirebaseConnection(page, [
+        await openProductPage(page, [
             { type: 'reject', message: 'Firebase connection failed' },
             { type: 'resolve' },
         ]);
-
-        await page.reload();
 
         // Wait for error state
         await page.waitForSelector('[data-testid="connection-error"]', { timeout: 15000 });
@@ -173,9 +149,7 @@ test.describe('Product Page', () => {
     });
 
     test('maintains correct aria and accessibility attributes', async ({ page }) => {
-        await mockFirebaseConnection(page, [{ type: 'resolve' }]);
-
-        await page.reload();
+        await openProductPage(page);
 
         // Wait for ProductList
         await page.waitForSelector('[data-testid="product-list"]', { timeout: 15000 });
@@ -193,9 +167,7 @@ test.describe('Product Page', () => {
     });
 
     test('handles viewport changes gracefully', async ({ page }) => {
-        await mockFirebaseConnection(page, [{ type: 'resolve' }]);
-
-        await page.reload();
+        await openProductPage(page);
 
         // Wait for ProductList to load
         await page.waitForSelector('[data-testid="product-list"]', { timeout: 15000 });
@@ -226,11 +198,9 @@ test.describe('Product Page', () => {
     });
 
     test('handles network timeout errors', async ({ page }) => {
-        await mockFirebaseConnection(page, [
+        await openProductPage(page, [
             { type: 'reject', message: 'Connection timeout', delay: 5000 },
         ]);
-
-        await page.reload();
 
         // Wait for error state after timeout
         await page.waitForSelector('[data-testid="connection-error"]', { timeout: 20000 });
@@ -239,12 +209,10 @@ test.describe('Product Page', () => {
     });
 
     test('retry button handles multiple failures', async ({ page }) => {
-        await mockFirebaseConnection(page, Array.from({ length: 3 }, () => ({
+        await openProductPage(page, Array.from({ length: 3 }, () => ({
             type: 'reject' as const,
             message: 'Persistent connection failure',
         })));
-
-        await page.reload();
 
         // Wait for error state
         await page.waitForSelector('[data-testid="connection-error"]', { timeout: 15000 });
