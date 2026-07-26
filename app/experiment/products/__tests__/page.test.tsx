@@ -86,9 +86,14 @@ describe('ProductPage Integration Tests', () => {
 
         render(<ProductPage />);
 
-        // Check loading state is shown
-        expect(screen.getByTestId('connection-loading')).toBeInTheDocument();
-        expect(screen.getByText('Connecting to Firebase...')).toBeInTheDocument();
+        // The page renders its idle state before the queued connection starts.
+        expect(screen.getByTestId('connection-idle')).toBeInTheDocument();
+        expect(screen.getByText('Initializing connection...')).toBeInTheDocument();
+
+        await waitFor(() => {
+            expect(screen.getByTestId('connection-loading')).toBeInTheDocument();
+            expect(screen.getByText('Connecting to Firebase...')).toBeInTheDocument();
+        });
 
         // Resolve the connection
         resolveConnection!('Connected');

@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test';
 import type { ProductListTestAdapter } from '../../../../components/product/productListTestAdapter';
 
 const route = '/experiment/products';
+const firebaseOutcomeCookie = 'products-firebase-test-outcomes';
 
 type FirebaseTestOutcome = {
     delay?: number;
@@ -11,12 +12,12 @@ type FirebaseTestOutcome = {
 };
 
 async function mockFirebaseConnection(page: Page, outcomes: FirebaseTestOutcome[]) {
-    await page.addInitScript((mockOutcomes) => {
-        const testWindow = window as Window & {
-            __PRODUCTS_FIREBASE_TEST_OUTCOMES__?: FirebaseTestOutcome[];
-        };
-        testWindow.__PRODUCTS_FIREBASE_TEST_OUTCOMES__ = mockOutcomes;
-    }, outcomes);
+    await page.context().addCookies([{
+        name: firebaseOutcomeCookie,
+        value: encodeURIComponent(JSON.stringify(outcomes)),
+        domain: '127.0.0.1',
+        path: '/',
+    }]);
 }
 
 async function mockProductList(page: Page) {
@@ -34,6 +35,17 @@ async function mockProductList(page: Page) {
 
 test.describe('Product Page', () => {
     test.beforeEach(async ({ page }) => {
+        await page.addInitScript((cookieName) => {
+            const prefix = `${cookieName}=`;
+            const encodedOutcomes = document.cookie
+                .split('; ')
+                .find(cookie => cookie.startsWith(prefix))
+                ?.slice(prefix.length);
+
+            window.__PRODUCTS_FIREBASE_TEST_OUTCOMES__ = encodedOutcomes
+                ? JSON.parse(decodeURIComponent(encodedOutcomes)) as FirebaseTestOutcome[]
+                : [];
+        }, firebaseOutcomeCookie);
         await mockFirebaseConnection(page, [{ type: 'resolve' }]);
         await mockProductList(page);
 
