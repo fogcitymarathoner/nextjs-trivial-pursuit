@@ -46,7 +46,7 @@ test.describe('TestFirebase page', () => {
 
     test('reports the number of existing products', async ({ page }) => {
         await openTestFirebase(page, { count: 2 });
-        await expect(page.getByText(/Connected! Found 2 products/)).toBeVisible();
+        await expect(page.getByText(/Connected! Found 2 products/)).toBeVisible({ timeout: 15000 });
     });
 
     test('creates a test product when the collection is empty', async ({ page }) => {

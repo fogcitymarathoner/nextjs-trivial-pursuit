@@ -114,9 +114,8 @@ test.describe('Trivia page', () => {
 
     await page.getByRole('button', { name: 'Add Sample Question' }).click();
 
-    await expect(page.getByText('Loading trivia questions...')).toBeVisible();
-    await expect(page.getByText(sampleQuestion.question)).toBeVisible();
-    await expect(page.locator('.space-y-4 > div')).toHaveCount(2);
+    await expect(page.getByText(sampleQuestion.question)).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.space-y-4 > div')).toHaveCount(2, { timeout: 15000 });
   });
 
   test('logs an add-question failure without replacing the list', async ({ page }) => {

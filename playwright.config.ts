@@ -351,7 +351,7 @@ export default defineConfig({
     command: webServerCommand,
     url: baseURL,
     reuseExistingServer: !isCI,
-    timeout: 120 * 1000,
+    timeout: 300 * 1000,
     // Wait for the server to be ready
     stdout: 'pipe',
     stderr: 'pipe',

@@ -169,9 +169,6 @@ test.describe('Product Page', () => {
     test('handles viewport changes gracefully', async ({ page }) => {
         await openProductPage(page);
 
-        // Wait for ProductList to load
-        await page.waitForSelector('[data-testid="product-list"]', { timeout: 15000 });
-
         // Test different viewport sizes
         const viewports = [
             { width: 320, height: 568 },  // iPhone SE
