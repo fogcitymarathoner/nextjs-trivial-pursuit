@@ -199,13 +199,12 @@ test.describe('Product Page', () => {
 
     test('handles network timeout errors', async ({ page }) => {
         await openProductPage(page, [
-            { type: 'reject', message: 'Connection timeout', delay: 5000 },
+            { type: 'reject', message: 'Connection timeout' },
         ]);
 
-        // Wait for error state after timeout
-        await page.waitForSelector('[data-testid="connection-error"]', { timeout: 20000 });
-        await expect(page.getByTestId('connection-error')).toBeVisible();
-        await expect(page.getByTestId('connection-error').getByText('Connection timeout')).toBeVisible();
+        const connectionError = page.getByTestId('connection-error');
+        await expect(connectionError).toBeVisible();
+        await expect(connectionError.getByText('Connection timeout')).toBeVisible();
     });
 
     test('retry button handles multiple failures', async ({ page }) => {
