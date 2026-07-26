@@ -16,6 +16,7 @@ export default function TriviaPage() {
                 incorrectAnswers: ['CO2', 'NaCl', 'HCl'],
             };
             const testCreateQuestion = process.env.NODE_ENV !== 'production'
+                || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
                 ? window.__TRIVIA_HOOK_TEST_ADAPTER__?.createQuestion
                 : undefined;
             await (testCreateQuestion?.(questionData)

@@ -12,6 +12,9 @@ const isFocusedTestRun = process.argv.some((arg) =>
 const isWatchMode = process.argv.includes('--watch') || process.argv.includes('--watchAll');
 const shouldCollectCoverage = isCoverage && !isWatchMode;
 env.PLAYWRIGHT_COLLECT_COVERAGE = String(shouldCollectCoverage);
+// Next.js forces NODE_ENV=production for CI builds. This explicit public flag
+// keeps browser-only test adapters available in the Playwright standalone app.
+env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE = 'true';
 const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
 const isWindowsNode22 = process.platform === 'win32' && process.versions.node.startsWith('22.');
 

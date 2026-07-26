@@ -7,7 +7,8 @@ import { useEffect, useState } from 'react';
 import type { FirebaseTestOutcome } from './testAdapter';
 
 async function connectToFirebase() {
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production'
+        || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true') {
         const outcome: FirebaseTestOutcome | undefined = window.__PRODUCTS_FIREBASE_TEST_OUTCOMES__?.shift();
         if (outcome) {
             if (outcome.delay) {

@@ -13,6 +13,7 @@ type AuthErrorLike = {
 };
 
 const getTestSignIn = (): GoogleSignInTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
     ? window.__GOOGLE_SIGN_IN_TEST__
     : undefined;
 

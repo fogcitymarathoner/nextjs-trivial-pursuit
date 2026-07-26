@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/client';
 import type { TestFirebaseAdapter } from './testAdapter';
 
 const getTestAdapter = (): TestFirebaseAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
     ? window.__TEST_FIREBASE_ADAPTER__
     : undefined;
 

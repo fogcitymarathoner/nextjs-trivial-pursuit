@@ -8,6 +8,7 @@ import type { TriviaTestAdapter } from './triviaTestAdapter';
 export type { TriviaTestAdapter } from './triviaTestAdapter';
 
 const getTestAdapter = (): TriviaTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
     ? window.__TRIVIA_HOOK_TEST_ADAPTER__
     : undefined;
 

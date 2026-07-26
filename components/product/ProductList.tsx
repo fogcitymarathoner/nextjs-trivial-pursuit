@@ -10,6 +10,7 @@ import { ProductFormModal } from './ProductFormModal';
 import type { ProductInput, ProductListTestAdapter } from './productListTestAdapter';
 
 const getTestAdapter = (): ProductListTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
     ? window.__PRODUCT_LIST_TEST_ADAPTER__
     : undefined;
 
