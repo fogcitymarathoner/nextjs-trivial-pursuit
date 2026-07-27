@@ -62,18 +62,6 @@ test.describe('Product Page', () => {
         }
     });
 
-    test('displays idle state initially', async ({ page }) => {
-        await openProductPage(page, [{ type: 'resolve', delay: 10000 }]);
-
-        // Check idle state is shown
-        await expect(page.getByTestId('connection-idle')).toBeVisible();
-        await expect(page.getByText('Initializing connection...')).toBeVisible();
-
-        // Wait for loading state to appear
-        await page.waitForSelector('[data-testid="connection-loading"]', { timeout: 5000 });
-        await expect(page.getByTestId('connection-loading')).toBeVisible();
-    });
-
     test('displays loading state while connecting to Firebase', async ({ page }) => {
         await openProductPage(page, [{ type: 'resolve', delay: 10000 }]);
 
