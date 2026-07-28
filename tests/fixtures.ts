@@ -22,7 +22,7 @@ function flattenSourceMap(sourceMap: SectionedSourceMapInput, mapUrl: string): S
 export const test = base.extend<{ collectCoverage: void }>({
     collectCoverage: [async ({ page }, use, testInfo) => {
         // Start coverage collection if COVERAGE is enabled
-        if (process.env.COVERAGE === 'true') {
+        if (process.env.PLAYWRIGHT_COLLECT_COVERAGE === 'true') {
             await page.coverage.startJSCoverage({
                 resetOnNavigation: true,
                 // Report raw coverage data including anonymous scripts
@@ -34,7 +34,7 @@ export const test = base.extend<{ collectCoverage: void }>({
         await use();
 
         // Stop coverage collection and save data
-        if (process.env.COVERAGE === 'true') {
+        if (process.env.PLAYWRIGHT_COLLECT_COVERAGE === 'true') {
             try {
                 // Get coverage data from Playwright's built-in API
                 const jsCoverage = await page.coverage.stopJSCoverage();

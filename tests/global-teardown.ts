@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 
 export default function globalTeardown() {
-    if (process.env.COVERAGE !== 'true') {
+    if (process.env.PLAYWRIGHT_COLLECT_COVERAGE !== 'true') {
         return;
     }
 
@@ -11,6 +11,7 @@ export default function globalTeardown() {
             require.resolve('nyc/bin/nyc.js'),
             'report',
             '--temp-dir=.nyc_output/playwright',
+            `--check-coverage=${process.env.CHECK_COVERAGE === 'true'}`,
             '--report-dir=coverage/playwright',
         ],
         { stdio: 'inherit' },

@@ -1,9 +1,14 @@
-// app/test-firebase/page.tsx
 'use client';
 
-import { db } from '@/lib/firebase/client';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/client';
+import type { TestFirebaseAdapter } from './testAdapter';
+
+const getTestAdapter = (): TestFirebaseAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
+    ? window.__TEST_FIREBASE_ADAPTER__
+    : undefined;
 
 export default function TestFirebase() {
     const [status, setStatus] = useState('Testing...');
@@ -11,12 +16,20 @@ export default function TestFirebase() {
     useEffect(() => {
         async function test() {
             try {
-                // Test read
+                const testAdapter = getTestAdapter();
+                if (testAdapter) {
+                    const productCount = await testAdapter.getProductCount();
+                    setStatus(`✅ Connected! Found ${productCount} products`);
+                    if (productCount === 0) {
+                        await testAdapter.createProduct();
+                        setStatus('✅ Created test product!');
+                    }
+                    return;
+                }
+
                 const productsRef = collection(db, 'products');
                 const snapshot = await getDocs(productsRef);
                 setStatus(`✅ Connected! Found ${snapshot.size} products`);
-
-                // If no products, create one
                 if (snapshot.size === 0) {
                     await addDoc(productsRef, {
                         name: 'Test Product',
@@ -25,7 +38,7 @@ export default function TestFirebase() {
                         category: 'Test',
                         inStock: true,
                         createdAt: new Date(),
-                        updatedAt: new Date()
+                        updatedAt: new Date(),
                     });
                     setStatus('✅ Created test product!');
                 }
@@ -35,7 +48,7 @@ export default function TestFirebase() {
             }
         }
 
-        test();
+        void test();
     }, []);
 
     return <div className="p-8">{status}</div>;

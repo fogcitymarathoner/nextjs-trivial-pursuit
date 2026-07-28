@@ -15,7 +15,8 @@ const nextConfig: NextConfig = {
     } : false,
 
     // Additional compiler options for Next.js 15
-    reactRemoveProperties: process.env.NODE_ENV === 'production',
+    reactRemoveProperties: process.env.NODE_ENV === 'production'
+      && process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE !== 'true',
   },
 
   images: {

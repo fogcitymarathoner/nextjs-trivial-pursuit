@@ -3,6 +3,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { questionService, quizService } from '../lib/firestore/triviaService';
 import { Question, Quiz } from '../lib/firestore/triviaTypes';
+import type { TriviaTestAdapter } from './triviaTestAdapter';
+
+export type { TriviaTestAdapter } from './triviaTestAdapter';
+
+const getTestAdapter = (): TriviaTestAdapter | undefined => process.env.NODE_ENV !== 'production'
+    || process.env.NEXT_PUBLIC_PLAYWRIGHT_TEST_MODE === 'true'
+    ? window.__TRIVIA_HOOK_TEST_ADAPTER__
+    : undefined;
+
+const getAllQuestions = () => getTestAdapter()?.getAllQuestions()
+    ?? questionService.getAllQuestions();
+const getQuiz = (id: string) => getTestAdapter()?.getQuiz(id)
+    ?? quizService.getQuiz(id);
+const getQuestion = (id: string) => getTestAdapter()?.getQuestion(id)
+    ?? questionService.getQuestion(id);
 
 export function useTriviaQuestions() {
     const [questions, setQuestions] = useState<Question[]>([]);
@@ -13,7 +28,7 @@ export function useTriviaQuestions() {
         try {
             setLoading(true);
             setError(null);
-            const data = await questionService.getAllQuestions();
+            const data = await getAllQuestions();
             setQuestions(data);
         } catch (err) {
             setError(err as Error);
@@ -25,7 +40,7 @@ export function useTriviaQuestions() {
     useEffect(() => {
         let ignore = false;
 
-        void questionService.getAllQuestions()
+        void getAllQuestions()
             .then((data) => {
                 if (!ignore) setQuestions(data);
             })
@@ -66,7 +81,7 @@ export function useTriviaQuiz(quizId: string) {
             }
         });
 
-        void quizService.getQuiz(quizId)
+        void getQuiz(quizId)
             .then(async (quizData) => {
                 if (!quizData) {
                     if (!ignore) {
@@ -77,7 +92,7 @@ export function useTriviaQuiz(quizId: string) {
                 }
 
                 const questionResults = await Promise.allSettled(
-                    quizData.questions.map((id) => questionService.getQuestion(id)),
+                    quizData.questions.map((id) => getQuestion(id)),
                 );
                 const questionData = questionResults
                     .filter((result) => result.status === 'fulfilled')

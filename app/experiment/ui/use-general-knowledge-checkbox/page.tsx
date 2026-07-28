@@ -1,4 +1,5 @@
 'use client';
+// app/experiment/ui/use-general-knowledge-checkbox/page.tsx
 // test harness for "use AI general knowledge" checkbox
 import { useState } from 'react';
 import { FallbackToGeneralKnowledgeCheckbox } from '@/components/fallback-to-general-knowledge-checkbox/FallbackToGeneralKnowledgeCheckbox';

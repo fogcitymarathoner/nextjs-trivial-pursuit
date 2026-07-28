@@ -49,3 +49,6 @@ https://platform.openai.com/settings/organization/billing/overview
 
 # Deployment
 https://nextjs-app-1007972461429.us-central1.run.app
+
+# Codex on VS Code uses API Key from here
+https://platform.openai.com/settings/organization/api-keys
