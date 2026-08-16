@@ -6,7 +6,7 @@ import path from "path";
 const TEMP_CONFIG_FILE = "tauri.temp.conf.json";
 
 /**
- * Checks if a port is available on localhost.
+ * Checks if a port is available on localhost (both IPv4 and IPv6).
  * @param {number} port
  * @returns {Promise<boolean>}
  */
@@ -17,7 +17,17 @@ function isPortAvailable(port) {
       resolve(false);
     });
     server.once("listening", () => {
-      server.close(() => resolve(true));
+      server.close(() => {
+        // Also check IPv6 loopback
+        const ipv6Server = net.createServer();
+        ipv6Server.once("error", () => {
+          resolve(false);
+        });
+        ipv6Server.once("listening", () => {
+          ipv6Server.close(() => resolve(true));
+        });
+        ipv6Server.listen(port, "::1");
+      });
     });
     server.listen(port, "127.0.0.1");
   });
